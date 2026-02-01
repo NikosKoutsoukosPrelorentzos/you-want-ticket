@@ -16,5 +16,5 @@ class Ticket(Base):
     created_date = Column(DateTime, default=datetime.utcnow)
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status = Column(SAEnum(TicketStatus), default=TicketStatus.SCHEDULED)
-    event_id = Column(Integer, ForeignKey("event.id"))
-    order_id = Column(Integer, ForeignKey("order.id"))
+    event_uuid = Column(Integer, ForeignKey("event.uuid"))
+    order_uuid = Column(Integer, ForeignKey("order.uuid"))

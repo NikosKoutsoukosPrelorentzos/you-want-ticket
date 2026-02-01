@@ -37,7 +37,6 @@ CREATE INDEX IF NOT EXISTS ix_event_id ON "event" (id);
 CREATE INDEX IF NOT EXISTS ix_event_uuid ON "event" (uuid);
 CREATE INDEX IF NOT EXISTS ix_event_type ON "event" (type);
 CREATE INDEX IF NOT EXISTS ix_event_title ON "event" (title);
-CREATE INDEX IF NOT EXISTS ix_event_description ON "event" (description);
 CREATE INDEX IF NOT EXISTS ix_event_start_date ON "event" (start_date);
 CREATE INDEX IF NOT EXISTS ix_event_end_date ON "event" (end_date);
 CREATE INDEX IF NOT EXISTS ix_event_location ON "event" (location);
@@ -62,8 +61,8 @@ CREATE TABLE IF NOT EXISTS "ticket" (
     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) DEFAULT 'SCHEDULED',
-    event_id INTEGER REFERENCES "event"(id),
-    order_id INTEGER REFERENCES "order"(id)
+    event_uuid UUID REFERENCES "event"(uuid),
+    order_uuid UUID REFERENCES "order"(uuid)
 );
 
 CREATE INDEX IF NOT EXISTS ix_ticket_id ON "ticket" (id);
