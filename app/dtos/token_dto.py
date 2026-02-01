@@ -1,12 +1,13 @@
+import uuid
 from typing import Optional
 
 from pydantic import BaseModel
 
 
-class Token(BaseModel):
+class TokenDTO(BaseModel):
     access_token: str
     token_type: str
 
 
 class TokenPayload(BaseModel):
-    sub: Optional[int] = None
+    sub: Optional[uuid] = None

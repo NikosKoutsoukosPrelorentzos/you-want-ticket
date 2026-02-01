@@ -1,5 +1,6 @@
 from typing import Optional
 
+import uuid
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -19,10 +20,11 @@ class UserUpdate(UserBase):
 
 class UserInDBBase(UserBase):
     id: Optional[int] = None
+    uuid: Optional[uuid] = None
     model_config = ConfigDict(from_attributes=True)
 
 
-class User(UserInDBBase):
+class UserDTO(UserInDBBase):
     pass
 
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import User
+from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 
@@ -43,13 +43,13 @@ def get_auth_service(
 def get_current_user(
     token: str = Depends(reusable_oauth2),
     auth_service: AuthService = Depends(get_auth_service),
-) -> User:
+) -> UserDTO:
     return auth_service.get_current_user(token)
 
 
 def get_current_active_user(
-    current_user: User = Depends(get_current_user),
-) -> User:
+    current_user: UserDTO = Depends(get_current_user),
+) -> UserDTO:
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

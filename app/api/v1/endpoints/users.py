@@ -1,23 +1,23 @@
 from fastapi import APIRouter, Depends
 
 from app.api import deps
-from app.schemas.user import User, UserCreate
+from app.dtos.user_dto import UserDTO, UserCreate
 from app.services.user_service import UserService
 
 router = APIRouter()
 
 
-@router.post("/", response_model=User)
+@router.post("/", response_model=UserDTO)
 def create_user(
     *,
     user_service: UserService = Depends(deps.get_user_service),
     user_in: UserCreate,
-) -> User:
+) -> UserDTO:
     return user_service.create_user(user_in=user_in)
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserDTO)
 def read_user_me(
-    current_user: User = Depends(deps.get_current_active_user),
-) -> User:
+    current_user: UserDTO = Depends(deps.get_current_active_user),
+) -> UserDTO:
     return current_user
