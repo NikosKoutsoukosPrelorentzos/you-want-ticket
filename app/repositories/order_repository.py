@@ -1,12 +1,14 @@
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
 from app.models.order import Order
 from app.dtos.order_dto import OrderCreate
 
 
 class OrderRepository:
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
 
     def create_order(self, order_create_request: OrderCreate) -> Order:

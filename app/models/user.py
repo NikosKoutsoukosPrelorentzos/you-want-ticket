@@ -1,4 +1,6 @@
 import uuid
+from typing import Any
+
 from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -12,4 +14,4 @@ class User(Base):
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean(), default=True)
+    is_active: Any = Column(Boolean(), default=True)

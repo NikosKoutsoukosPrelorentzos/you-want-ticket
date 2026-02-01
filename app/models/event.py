@@ -14,7 +14,7 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, index=True, nullable=False)
-    type = Column(SAEnum(EventType), index=True)
+    type: EventType = Column(SAEnum(EventType), index=True)
     title = Column(String, index=True)
     description = Column(String)
     owner_id = Column(Integer, ForeignKey("user.id"))
@@ -22,6 +22,6 @@ class Event(Base):
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     start_date = Column(DateTime, index=True)
     end_date = Column(DateTime, index=True)
-    status = Column(SAEnum(EventStatus), default=EventStatus.SCHEDULED)
+    status: EventStatus = Column(SAEnum(EventStatus), default=EventStatus.SCHEDULED)
     location = Column(String, index=True)
     available_number_of_tickets = Column(Integer)

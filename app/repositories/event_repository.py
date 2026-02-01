@@ -1,12 +1,14 @@
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
 from app.models.event import Event
 from app.dtos.event_dto import EventCreate
 
 
 class EventRepository:
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
 
     def create_event(self, event_create_request: EventCreate) -> Event:
