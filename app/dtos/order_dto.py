@@ -4,10 +4,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.enums.order_status import OrderStatus
 
-# Shared properties
+
 class OrderBase(BaseModel):
-    status: Optional[str] = "open"
+    status: Optional[OrderStatus]
     number_of_tickets: Optional[int] = None
 
 
@@ -25,8 +26,8 @@ class OrderUpdate(OrderBase):
 # Properties shared by models stored in DB
 class OrderInDBBase(OrderBase):
     uuid: UUID
-    owner_id: int
-    event_id: int
+    owner_uuid: UUID
+    event_uuid: UUID
     created_date: datetime
     updated_date: datetime
 

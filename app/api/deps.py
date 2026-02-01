@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.repositories.event_repository import EventRepository
+from app.repositories.order_repository import OrderRepository
 from app.repositories.user_repository import UserRepository
 from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.event_service import EventService
+from app.services.order_service import OrderService
 from app.services.user_service import UserService
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -56,12 +58,27 @@ def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
+
 def get_event_repository(
         db: Session = Depends(get_db)
 ) -> EventRepository:
     return EventRepository(db)
 
+
 def get_event_service(
         event_repository: EventRepository = Depends(get_event_repository),
 ) -> EventService:
     return EventService(event_repository)
+
+
+def get_order_repository(
+        db: Session = Depends(get_db)
+) -> OrderRepository:
+    return OrderRepository(db)
+
+
+def get_order_service(
+        order_repository: OrderRepository = Depends(get_order_repository),
+        event_service: EventService = Depends(get_event_service),
+) -> OrderService:
+    return OrderService(order_repository, event_service)

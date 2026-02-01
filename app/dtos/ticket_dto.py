@@ -4,10 +4,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.enums.ticket_status import TicketStatus
+
 
 # Shared properties
 class TicketBase(BaseModel):
-    status: Optional[str] = "open"
+    status: Optional[TicketStatus]
 
 
 # Properties to receive on ticket creation

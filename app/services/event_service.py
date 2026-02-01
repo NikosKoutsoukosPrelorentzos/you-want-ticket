@@ -36,3 +36,15 @@ class EventService:
     def get_events_by_location(self, location: str) -> list[EventDTO]:
         db_events = self.event_repository.get_events_by_location(location)
         return [EventDTO.model_validate(event) for event in db_events]
+
+    def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int):
+        result = self.event_repository.remove_available_tickets(event_uuid, number_of_tickets)
+        if result == 0:
+            raise HTTPException(status_code=409, detail="Event is sold out")
+        return
+
+    def add_available_tickets(self, event_uuid: UUID, number_of_tickets: int):
+        result = self.event_repository.add_available_tickets(event_uuid, number_of_tickets)
+        if result == 0:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
@@ -36,3 +37,26 @@ class EventRepository:
 
     def get_events_by_location(self, location: str) -> list[type[Event]]:
         return self.db.query(Event).filter(Event.location == location).all()
+
+    def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.uuid == event_uuid)
+            .where(Event.available_number_of_tickets >= number_of_tickets)
+            .values(available_number_of_tickets=Event.available_number_of_tickets - number_of_tickets)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
+
+    def add_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.uuid == event_uuid)
+            .values(available_number_of_tickets=Event.available_number_of_tickets + number_of_tickets)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
