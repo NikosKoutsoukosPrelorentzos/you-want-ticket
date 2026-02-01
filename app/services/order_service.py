@@ -22,3 +22,10 @@ class OrderService:
         self.event_service.remove_available_tickets(db_event.uuid, order_create_request.number_of_tickets)
         db_order = self.order_repository.create_order(order_create_request, user_uuid)
         return OrderDTO.model_validate(db_order)
+
+    def get_expired_orders(self, cutoff_time: datetime) -> list[OrderDTO]:
+        db_orders = self.order_repository.get_expired_orders(cutoff_time)
+        return [OrderDTO.model_validate(order) for order in db_orders]
+
+    def cancel_expired_order(self, order_uuid: UUID) -> int:
+        return self.order_repository.cancel_expired_order(order_uuid)

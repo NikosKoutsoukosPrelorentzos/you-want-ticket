@@ -12,6 +12,7 @@ from app.repositories.user_repository import UserRepository
 from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.event_service import EventService
+from app.services.order_cleanup_service import OrderCleanupService
 from app.services.order_service import OrderService
 from app.services.user_service import UserService
 
@@ -82,3 +83,10 @@ def get_order_service(
         event_service: EventService = Depends(get_event_service),
 ) -> OrderService:
     return OrderService(order_repository, event_service)
+
+
+def get_order_cleanup_service(
+        order_service: OrderService = Depends(get_order_service),
+        event_service: EventService = Depends(get_event_service),
+) -> OrderCleanupService:
+    return OrderCleanupService(order_service, event_service)
