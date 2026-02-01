@@ -37,16 +37,15 @@ class EventUpdate(EventBase):
 
 # Properties shared by models stored in DB
 class EventInDBBase(EventBase):
-    id: int
     uuid: UUID
-    owner_id: int
+    owner_uuid: UUID
     created_date: datetime
     updated_date: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-# Properties to return to client
+# Properties to return to a client
 class EventDTO(EventInDBBase):
     pass
 

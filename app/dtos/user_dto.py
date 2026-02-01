@@ -19,8 +19,7 @@ class UserUpdate(UserBase):
 
 
 class UserInDBBase(UserBase):
-    id: Optional[int] = None
-    uuid: Optional[UUID] = None
+    uuid: UUID
     model_config = ConfigDict(from_attributes=True)
 
 

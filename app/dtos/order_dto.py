@@ -24,7 +24,6 @@ class OrderUpdate(OrderBase):
 
 # Properties shared by models stored in DB
 class OrderInDBBase(OrderBase):
-    id: int
     uuid: UUID
     owner_id: int
     event_id: int
