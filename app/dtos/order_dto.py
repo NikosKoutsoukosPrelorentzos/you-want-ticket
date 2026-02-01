@@ -13,7 +13,7 @@ class OrderBase(BaseModel):
 
 # Properties to receive on order creation
 class OrderCreate(OrderBase):
-    event_id: int
+    event_uuid: UUID
     number_of_tickets: int
 
 

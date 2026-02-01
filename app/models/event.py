@@ -17,7 +17,7 @@ class Event(Base):
     type: EventType = Column(SAEnum(EventType), index=True)
     title = Column(String, index=True)
     description = Column(String)
-    owner_id = Column(Integer, ForeignKey("user.id"))
+    owner_uuid = Column(UUID(as_uuid=True), ForeignKey("user.uuid"))
     created_date = Column(DateTime, default=datetime.utcnow)
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     start_date = Column(DateTime, index=True)

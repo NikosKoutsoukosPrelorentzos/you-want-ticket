@@ -12,13 +12,12 @@ class TicketBase(BaseModel):
 
 # Properties to receive on ticket creation
 class TicketCreate(TicketBase):
-    event_id: int
-    order_id: int
+    event_uuid: UUID
 
 
 # Properties to receive on ticket update
 class TicketUpdate(TicketBase):
-    pass
+    ticket_uuid: UUID
 
 
 # Properties shared by models stored in DB

@@ -11,12 +11,12 @@ class OrderRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_order(self, order_create_request: OrderCreate) -> Order:
+    def create_order(self, order_create_request: OrderCreate, user_uuid: UUID) -> Order:
         db_order = Order(
-            event_id=order_create_request.event_id,
+            event_uuid=order_create_request.event_uuid,
             number_of_tickets=order_create_request.number_of_tickets,
             status=order_create_request.status,
-            owner_id=order_create_request.owner_id
+            owner_uuid=user_uuid,
         )
         self.db.add(db_order)
         self.db.commit()

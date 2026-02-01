@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -11,8 +12,9 @@ class EventRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_event(self, event_create_request: EventCreate) -> Event:
+    def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> Event:
         db_event = Event(
+            owner_uuid=user_uuid,
             type=event_create_request.type,
             title=event_create_request.title,
             description=event_create_request.description,
@@ -28,3 +30,9 @@ class EventRepository:
 
     def get_event_by_uuid(self, event_uuid: UUID) -> Optional[Event]:
         return self.db.query(Event).filter(Event.uuid == event_uuid).first()
+
+    def get_events_by_start_date(self, start_date: datetime) -> list[type[Event]]:
+        return self.db.query(Event).filter(Event.start_date == start_date).all()
+
+    def get_events_by_location(self, location: str) -> list[type[Event]]:
+        return self.db.query(Event).filter(Event.location == location).all()
