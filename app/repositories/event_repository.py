@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 from sqlalchemy import update
@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.event import Event
 from app.dtos.event_dto import EventCreate
+from app.enums.event_type import EventType
 
 
 class EventRepository:
@@ -60,3 +61,23 @@ class EventRepository:
         result = self.db.execute(stmt)
         self.db.commit()
         return result.rowcount
+
+    def get_all_events(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        event_type: Optional[EventType] = None,
+        location: Optional[str] = None
+    ) -> List[Event]:
+        query = self.db.query(Event)
+        
+        if start_date:
+            query = query.filter(Event.start_date >= start_date)
+        if end_date:
+            query = query.filter(Event.end_date <= end_date)
+        if event_type:
+            query = query.filter(Event.type == event_type)
+        if location:
+            query = query.filter(Event.location.ilike(f"%{location}%"))
+            
+        return query.all()

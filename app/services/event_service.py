@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import Optional, List
 
 from fastapi import HTTPException
 from sqlalchemy import UUID
 
 from app.dtos.event_dto import EventCreate, EventDTO
 from app.repositories.event_repository import EventRepository
+from app.enums.event_type import EventType
 
 
 class EventService:
@@ -48,3 +50,18 @@ class EventService:
         if result == 0:
             raise HTTPException(status_code=404, detail="Event not found")
         return
+
+    def get_all_events(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        event_type: Optional[EventType] = None,
+        location: Optional[str] = None
+    ) -> List[EventDTO]:
+        db_events = self.event_repository.get_all_events(
+            start_date=start_date,
+            end_date=end_date,
+            event_type=event_type,
+            location=location
+        )
+        return [EventDTO.model_validate(event) for event in db_events]

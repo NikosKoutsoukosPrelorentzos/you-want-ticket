@@ -10,7 +10,36 @@ logger = setup_logger(__name__)
 scheduler = BackgroundScheduler()
 
 
-def run_order_cleanup_job():
+def start_scheduler():
+    """
+    Starts the background scheduler and adds the cleanup job.
+    """
+    if not scheduler.running:
+        # Run every 1 minute
+        trigger = IntervalTrigger(minutes=1)
+
+        scheduler.add_job(
+            __run_order_cleanup_job,
+            trigger=trigger,
+            id="order_cleanup",
+            name="Cleanup expired orders",
+            replace_existing=True
+        )
+
+        scheduler.start()
+        logger.info("Scheduler started with order cleanup job (interval: 1 min).")
+
+
+def stop_scheduler():
+    """
+    Shuts down the scheduler.
+    """
+    if scheduler.running:
+        scheduler.shutdown()
+        logger.info("Scheduler shut down.")
+
+
+def __run_order_cleanup_job():
     """
     Job function that creates a new DB session, runs the cleanup service,
     and then closes the session.
@@ -35,32 +64,3 @@ def run_order_cleanup_job():
     finally:
         db.close()
         logger.info("Finished scheduled order cleanup job.")
-
-
-def start_scheduler():
-    """
-    Starts the background scheduler and adds the cleanup job.
-    """
-    if not scheduler.running:
-        # Run every 1 minute
-        trigger = IntervalTrigger(minutes=1)
-
-        scheduler.add_job(
-            run_order_cleanup_job,
-            trigger=trigger,
-            id="order_cleanup",
-            name="Cleanup expired orders",
-            replace_existing=True
-        )
-
-        scheduler.start()
-        logger.info("Scheduler started with order cleanup job (interval: 1 min).")
-
-
-def stop_scheduler():
-    """
-    Shuts down the scheduler.
-    """
-    if scheduler.running:
-        scheduler.shutdown()
-        logger.info("Scheduler shut down.")

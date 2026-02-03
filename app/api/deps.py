@@ -8,12 +8,14 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.repositories.event_repository import EventRepository
 from app.repositories.order_repository import OrderRepository
+from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.event_service import EventService
 from app.services.order_cleanup_service import OrderCleanupService
 from app.services.order_service import OrderService
+from app.services.ticket_service import TicketService
 from app.services.user_service import UserService
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -90,3 +92,16 @@ def get_order_cleanup_service(
         event_service: EventService = Depends(get_event_service),
 ) -> OrderCleanupService:
     return OrderCleanupService(order_service, event_service)
+
+
+def get_ticket_repository(
+        db: Session = Depends(get_db)
+) -> TicketRepository:
+    return TicketRepository(db)
+
+
+def get_ticket_service(
+        ticket_repository: TicketRepository = Depends(get_ticket_repository),
+        event_repository: EventRepository = Depends(get_event_repository)
+) -> TicketService:
+    return TicketService(ticket_repository, event_repository)

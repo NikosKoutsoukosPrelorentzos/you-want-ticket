@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -47,3 +47,46 @@ class OrderRepository:
         result = self.db.execute(stmt)
         self.db.commit()
         return result.rowcount
+
+    def finalize_order_by_user(self, order_uuid: UUID, user_uuid: UUID) -> int:
+        stmt = (update(Order)
+                .where(Order.uuid == order_uuid)
+                .where(Order.owner_uuid == user_uuid)
+                .where(Order.status == OrderStatus.IN_PROGRESS)
+                .values(status=OrderStatus.FINALIZED)
+                .values(updated_date=datetime.utcnow())
+                .execution_options(synchronize_session="fetch")
+                )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
+
+    def cancel_order_by_user(self, order_uuid: UUID, user_uuid: UUID):
+        stmt = (update(Order)
+                .where(Order.uuid == order_uuid)
+                .where(Order.owner_uuid == user_uuid)
+                .values(status=OrderStatus.CANCELLED)
+                .values(updated_date=datetime.utcnow())
+                .execution_options(synchronize_session="fetch")
+                )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
+
+    def get_all_user_order(
+        self, 
+        user_uuid: UUID,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        status: Optional[OrderStatus] = None
+    ) -> List[Order]:
+        stmt = select(Order).where(Order.owner_uuid == user_uuid)
+        
+        if start_date:
+            stmt = stmt.where(Order.created_date >= start_date)
+        if end_date:
+            stmt = stmt.where(Order.created_date <= end_date)
+        if status:
+            stmt = stmt.where(Order.status == status)
+
+        return self.db.scalars(stmt).all()
