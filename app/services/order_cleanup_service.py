@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy.orm import Session
+
 from app.core.logger import setup_logger
 from app.services.event_service import EventService
 from app.services.order_service import OrderService
@@ -8,7 +10,8 @@ logger = setup_logger(__name__)
 
 
 class OrderCleanupService:
-    def __init__(self, order_service: OrderService, event_service: EventService):
+    def __init__(self, db: Session, order_service: OrderService, event_service: EventService):
+        self.db = db
         self.order_service = order_service
         self.event_service = event_service
 
@@ -26,7 +29,10 @@ class OrderCleanupService:
             try:
                 self.order_service.cancel_expired_order(order.uuid)
                 self.event_service.add_available_tickets(order.event_uuid, order.number_of_tickets)
+                self.db.commit()
                 logger.info(f"Cancelled expired order {order.uuid} and released {order.number_of_tickets} tickets.")
             except Exception as e:
                 logger.error(f"Failed to cancel order {order.uuid}: {str(e)}")
+                self.db.rollback()
+                logger.info("Rolling back transaction")
                 continue

@@ -20,8 +20,9 @@ class TicketService:
         if not ticket_create_requests:
             return []
         first_request = ticket_create_requests[0]
-        logger.info(f"Attempting to create {len(ticket_create_requests)} tickets for event UUID: {first_request.event_uuid}")
-        
+        logger.info(
+            f"Attempting to create {len(ticket_create_requests)} tickets for event UUID: {first_request.event_uuid}")
+
         event = self.event_repository.get_event_by_uuid(first_request.event_uuid)
         if not event:
             logger.error(f"Event not found: {first_request.event_uuid}")
@@ -29,10 +30,10 @@ class TicketService:
 
         created_tickets = []
         for request in ticket_create_requests:
-             # We could optimize this with a bulk insert in the repository later
+            # We could optimize this with a bulk insert in the repository later
             db_ticket = self.ticket_repository.create_ticket(request)
             created_tickets.append(TicketDTO.model_validate(db_ticket))
-            
+
         logger.info(f"Successfully created {len(created_tickets)} tickets")
         return created_tickets
 
@@ -49,8 +50,15 @@ class TicketService:
         db_tickets = self.ticket_repository.get_tickets_by_order_uuid(order_uuid)
         return [TicketDTO.model_validate(ticket) for ticket in db_tickets]
 
-    def cancel_ticket(self, ticket_uuid: UUID) -> None:
+    def cancel_ticket(self, ticket_uuid: UUID, user_uuid: UUID) -> None:
         logger.info(f"Attempting to cancel ticket: {ticket_uuid}")
+        db_ticket = self.ticket_repository.get_ticket_by_uuid(ticket_uuid)
+        if not db_ticket:
+            logger.warning(f"Ticket not found: {ticket_uuid}")
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        if db_ticket.owner_uuid != user_uuid:
+            logger.warning(f"User {user_uuid} is not the owner of ticket {ticket_uuid}")
+            raise HTTPException(status_code=403, detail="Not authorized to cancel this ticket")
         rows_affected = self.ticket_repository.cancel_ticket(ticket_uuid)
         if rows_affected == 0:
             logger.warning(f"Failed to cancel ticket {ticket_uuid}. It might not exist or is not in SCHEDULED status.")
@@ -59,8 +67,13 @@ class TicketService:
 
     def finalize_ticket(self, ticket_uuid: UUID) -> None:
         logger.info(f"Attempting to finalize ticket: {ticket_uuid}")
+        db_ticket = self.ticket_repository.get_ticket_by_uuid(ticket_uuid)
+        if not db_ticket:
+            logger.warning(f"Ticket not found: {ticket_uuid}")
+            raise HTTPException(status_code=404, detail="Ticket not found")
         rows_affected = self.ticket_repository.finalize_ticket(ticket_uuid)
         if rows_affected == 0:
-            logger.warning(f"Failed to finalize ticket {ticket_uuid}. It might not exist or is not in SCHEDULED status.")
+            logger.warning(
+                f"Failed to finalize ticket {ticket_uuid}. It might not exist or is not in SCHEDULED status.")
             raise HTTPException(status_code=409, detail="Ticket could not be finalized (invalid status or not found)")
         logger.info(f"Ticket {ticket_uuid} finalized successfully")

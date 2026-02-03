@@ -45,7 +45,6 @@ class EventRepository(BaseRepository):
             .execution_options(synchronize_session="fetch")
         )
         result = self.db.execute(stmt)
-        # Removed commit to allow transaction control by service
         return result.rowcount
 
     def add_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
@@ -56,7 +55,6 @@ class EventRepository(BaseRepository):
             .execution_options(synchronize_session="fetch")
         )
         result = self.db.execute(stmt)
-        # Removed commit to allow transaction control by service
         return result.rowcount
 
     def get_all_events(

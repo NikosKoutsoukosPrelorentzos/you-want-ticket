@@ -18,3 +18,4 @@ class Ticket(Base):
     status = Column(SAEnum(TicketStatus), default=TicketStatus.SCHEDULED)
     event_uuid = Column(UUID, ForeignKey("event.uuid"))
     order_uuid = Column(UUID, ForeignKey("order.uuid"))
+    owner_uuid = Column(UUID, ForeignKey("user.uuid"))

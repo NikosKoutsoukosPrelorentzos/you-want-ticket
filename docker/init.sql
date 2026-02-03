@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS "ticket" (
     updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) DEFAULT 'SCHEDULED',
     event_uuid UUID REFERENCES "event"(uuid),
-    order_uuid UUID REFERENCES "order"(uuid)
+    order_uuid UUID REFERENCES "order"(uuid),
+    owner_uuid UUID REFERENCES "user"(uuid)
 );
 
 CREATE INDEX IF NOT EXISTS ix_ticket_id ON "ticket" (id);
