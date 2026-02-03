@@ -3,17 +3,14 @@ from typing import Optional, List
 from uuid import UUID
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
 
 from app.enums.order_status import OrderStatus
 from app.models.order import Order
 from app.dtos.order_dto import OrderCreate
+from app.repositories.base_repository import BaseRepository
 
 
-class OrderRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
+class OrderRepository(BaseRepository):
     def create_order(self, order_create_request: OrderCreate, user_uuid: UUID) -> Order:
         db_order = Order(
             event_uuid=order_create_request.event_uuid,
@@ -45,7 +42,6 @@ class OrderRepository:
                 .values(updated_date=datetime.utcnow())
                 .execution_options(synchronize_session="fetch"))
         result = self.db.execute(stmt)
-        self.db.commit()
         return result.rowcount
 
     def finalize_order_by_user(self, order_uuid: UUID, user_uuid: UUID) -> int:
@@ -58,7 +54,6 @@ class OrderRepository:
                 .execution_options(synchronize_session="fetch")
                 )
         result = self.db.execute(stmt)
-        self.db.commit()
         return result.rowcount
 
     def cancel_order_by_user(self, order_uuid: UUID, user_uuid: UUID):
@@ -70,7 +65,6 @@ class OrderRepository:
                 .execution_options(synchronize_session="fetch")
                 )
         result = self.db.execute(stmt)
-        self.db.commit()
         return result.rowcount
 
     def get_all_user_order(

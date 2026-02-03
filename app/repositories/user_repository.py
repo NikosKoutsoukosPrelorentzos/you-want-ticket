@@ -1,17 +1,13 @@
-from typing import Any, Optional
+from typing import Optional
 from uuid import UUID
-
-from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
 from app.models.user import User
 from app.dtos.user_dto import UserCreate
+from app.repositories.base_repository import BaseRepository
 
 
-class UserRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
+class UserRepository(BaseRepository):
     def create(self, user_in: UserCreate) -> User:
         db_obj = User(
             email=user_in.email,

@@ -3,17 +3,14 @@ from typing import Optional, List
 from uuid import UUID
 
 from sqlalchemy import update
-from sqlalchemy.orm import Session
 
 from app.models.event import Event
 from app.dtos.event_dto import EventCreate
 from app.enums.event_type import EventType
+from app.repositories.base_repository import BaseRepository
 
 
-class EventRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
+class EventRepository(BaseRepository):
     def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> Event:
         db_event = Event(
             owner_uuid=user_uuid,
@@ -48,7 +45,7 @@ class EventRepository:
             .execution_options(synchronize_session="fetch")
         )
         result = self.db.execute(stmt)
-        self.db.commit()
+        # Removed commit to allow transaction control by service
         return result.rowcount
 
     def add_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
@@ -59,7 +56,7 @@ class EventRepository:
             .execution_options(synchronize_session="fetch")
         )
         result = self.db.execute(stmt)
-        self.db.commit()
+        # Removed commit to allow transaction control by service
         return result.rowcount
 
     def get_all_events(

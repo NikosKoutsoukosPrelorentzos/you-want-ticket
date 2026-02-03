@@ -1,16 +1,13 @@
 from sqlalchemy import update
-from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.enums.ticket_status import TicketStatus
 from app.models.ticket import Ticket
 from app.dtos.ticket_dto import TicketCreate
+from app.repositories.base_repository import BaseRepository
 
 
-class TicketRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
+class TicketRepository(BaseRepository):
     def create_ticket(self, ticket_create_request: TicketCreate) -> Ticket:
         db_ticket: Ticket = Ticket(
             event_uuid=ticket_create_request.event_uuid,
@@ -34,7 +31,9 @@ class TicketRepository:
                 .where(Ticket.status == TicketStatus.SCHEDULED)
                 .values(status=TicketStatus.CANCELLED)
                 )
-        return self.db.execute(stmt).rowcount
+        result = self.db.execute(stmt)
+        # Removed commit to allow transaction control by service
+        return result.rowcount
 
     def finalize_ticket(self, ticket_uuid: UUID) -> int:
         stmt = (update(Ticket)
@@ -42,4 +41,6 @@ class TicketRepository:
                 .where(Ticket.status == TicketStatus.SCHEDULED)
                 .values(status=TicketStatus.FINALIZED)
                 )
-        return self.db.execute(stmt).rowcount
+        result = self.db.execute(stmt)
+        # Removed commit to allow transaction control by service
+        return result.rowcount

@@ -80,20 +80,6 @@ def get_order_repository(
     return OrderRepository(db)
 
 
-def get_order_service(
-        order_repository: OrderRepository = Depends(get_order_repository),
-        event_service: EventService = Depends(get_event_service),
-) -> OrderService:
-    return OrderService(order_repository, event_service)
-
-
-def get_order_cleanup_service(
-        order_service: OrderService = Depends(get_order_service),
-        event_service: EventService = Depends(get_event_service),
-) -> OrderCleanupService:
-    return OrderCleanupService(order_service, event_service)
-
-
 def get_ticket_repository(
         db: Session = Depends(get_db)
 ) -> TicketRepository:
@@ -105,3 +91,18 @@ def get_ticket_service(
         event_repository: EventRepository = Depends(get_event_repository)
 ) -> TicketService:
     return TicketService(ticket_repository, event_repository)
+
+
+def get_order_service(
+        order_repository: OrderRepository = Depends(get_order_repository),
+        event_service: EventService = Depends(get_event_service),
+        ticket_service: TicketService = Depends(get_ticket_service)
+) -> OrderService:
+    return OrderService(order_repository, event_service, ticket_service)
+
+
+def get_order_cleanup_service(
+        oder_service: OrderService = Depends(get_order_service),
+        event_service: EventService = Depends(get_event_service),
+) -> OrderCleanupService:
+    return OrderCleanupService(oder_service, event_service)
