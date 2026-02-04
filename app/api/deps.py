@@ -102,7 +102,8 @@ def get_order_service(
 
 
 def get_order_cleanup_service(
+        db: Session = Depends(get_db),
         oder_service: OrderService = Depends(get_order_service),
         event_service: EventService = Depends(get_event_service),
 ) -> OrderCleanupService:
-    return OrderCleanupService(oder_service, event_service)
+    return OrderCleanupService(db, oder_service, event_service)

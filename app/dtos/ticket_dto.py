@@ -26,8 +26,8 @@ class TicketUpdate(TicketBase):
 # Properties shared by models stored in DB
 class TicketInDBBase(TicketBase):
     uuid: UUID
-    event_id: int
-    order_id: int
+    event_uuid: UUID
+    order_uuid: UUID
     created_date: datetime
     updated_date: datetime
 

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from uuid import UUID
 
 from app.api import deps
 from app.core.logger import setup_logger
@@ -41,13 +42,31 @@ def get_all_events(
         current_user: UserDTO = Depends(deps.get_current_active_user)
 ) -> list[EventDTO]:
     try:
-        logger.info(f"Getting all events for user: {current_user.email} with filters: start={start_date}, end={end_date}, type={event_type}, loc={location}")
+        logger.info(
+            f"Getting all events for user: {current_user.email} with filters: start={start_date}, end={end_date}, type={event_type}, loc={location}")
         return event_service.get_all_events(
             start_date=start_date,
             end_date=end_date,
             event_type=event_type,
             location=location
         )
+    except HTTPException as e:
+        logger.error(e)
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/{event_uuid}")
+def get_event_by_uuid(
+        event_uuid: UUID,
+        event_service: EventService = Depends(deps.get_event_service),
+        current_user: UserDTO = Depends(deps.get_current_active_user)
+) -> EventDTO:
+    try:
+        logger.info(f"Getting event by UUID: {event_uuid} for user: {current_user.email}")
+        return event_service.get_event_by_uuid(event_uuid)
     except HTTPException as e:
         logger.error(e)
         raise e
