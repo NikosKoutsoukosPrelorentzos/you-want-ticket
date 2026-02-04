@@ -16,6 +16,7 @@ class TicketBase(BaseModel):
 class TicketCreate(TicketBase):
     event_uuid: UUID
     order_uuid: UUID
+    owner_uuid: UUID
 
 
 # Properties to receive on ticket update

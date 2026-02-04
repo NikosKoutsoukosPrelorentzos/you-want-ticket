@@ -19,11 +19,12 @@ class OrderRepository(BaseRepository):
             owner_uuid=user_uuid,
         )
         self.db.add(db_order)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(db_order)
         return db_order
 
     def get_order_by_uuid(self, order_uuid: UUID) -> Optional[Order]:
+
         return self.db.query(Order).filter(Order.uuid == order_uuid).first()
 
     def get_expired_orders(self, cutoff_time: datetime) -> list[Order]:

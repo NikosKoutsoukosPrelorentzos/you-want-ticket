@@ -65,6 +65,7 @@ class OrderService:
                 TicketCreate(
                     event_uuid=db_order.event_uuid,
                     order_uuid=db_order.uuid,
+                    owner_uuid=user_uuid,
                     status=TicketStatus.SCHEDULED
                 )
                 for _ in range(db_order.number_of_tickets)

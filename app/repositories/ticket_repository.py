@@ -15,7 +15,7 @@ class TicketRepository(BaseRepository):
             status=ticket_create_request.status
         )
         self.db.add(db_ticket)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(db_ticket)
         return db_ticket
 
@@ -32,7 +32,6 @@ class TicketRepository(BaseRepository):
                 .values(status=TicketStatus.CANCELLED)
                 )
         result = self.db.execute(stmt)
-        # Removed commit to allow transaction control by service
         return result.rowcount
 
     def finalize_ticket(self, ticket_uuid: UUID) -> int:
@@ -42,5 +41,4 @@ class TicketRepository(BaseRepository):
                 .values(status=TicketStatus.FINALIZED)
                 )
         result = self.db.execute(stmt)
-        # Removed commit to allow transaction control by service
         return result.rowcount
