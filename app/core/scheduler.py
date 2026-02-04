@@ -45,18 +45,15 @@ def __run_order_cleanup_job():
     and then closes the session.
     """
     logger.info("Starting scheduled order cleanup job...")
-    # Create the generator
     db_gen = get_db()
 
-    # Get the session from the generator
     db = next(db_gen)
     try:
-        # Manually resolve dependencies since we are outside of a request context
         event_repository = get_event_repository(db)
         order_repository = get_order_repository(db)
         event_service = get_event_service(event_repository)
         order_service = get_order_service(order_repository, event_service)
-        service = get_order_cleanup_service(order_service, event_service)
+        service = get_order_cleanup_service(db, order_service, event_service)
 
         service.cancel_expired_orders()
     except Exception as e:
