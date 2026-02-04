@@ -4,6 +4,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from uuid import UUID
 
+from starlette.responses import JSONResponse
+
 from app.api import deps
 from app.core.logger import setup_logger
 from app.dtos.event_dto import EventDTO, EventCreate
@@ -67,6 +69,24 @@ def get_event_by_uuid(
     try:
         logger.info(f"Getting event by UUID: {event_uuid} for user: {current_user.email}")
         return event_service.get_event_by_uuid(event_uuid)
+    except HTTPException as e:
+        logger.error(e)
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/{event_uuid}/cancel")
+def cancel_event(
+        event_uuid: UUID,
+        event_service: EventService = Depends(deps.get_event_service),
+        current_user: UserDTO = Depends(deps.get_current_active_user)
+) -> JSONResponse:
+    try:
+        logger.info(f"Cancelling event with UUID: {event_uuid} for user: {current_user.email}")
+        event_service.cancel_event(event_uuid, current_user.uuid)
+        return JSONResponse(status_code=200, content={"message": "Event cancelled successfully"})
     except HTTPException as e:
         logger.error(e)
         raise e

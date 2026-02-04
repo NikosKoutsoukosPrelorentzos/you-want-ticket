@@ -10,6 +10,13 @@ logger = setup_logger(__name__)
 scheduler = BackgroundScheduler()
 
 
+def get_scheduler():
+    """
+    Dependency to get the running scheduler instance.
+    """
+    return scheduler
+
+
 def start_scheduler():
     """
     Starts the background scheduler and adds the cleanup job.

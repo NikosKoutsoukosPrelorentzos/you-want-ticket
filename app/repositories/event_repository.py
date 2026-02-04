@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import update
 
+from app.enums.event_status import EventStatus
 from app.models.event import Event
 from app.dtos.event_dto import EventCreate
 from app.enums.event_type import EventType
@@ -58,14 +59,14 @@ class EventRepository(BaseRepository):
         return result.rowcount
 
     def get_all_events(
-        self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        event_type: Optional[EventType] = None,
-        location: Optional[str] = None
+            self,
+            start_date: Optional[datetime] = None,
+            end_date: Optional[datetime] = None,
+            event_type: Optional[EventType] = None,
+            location: Optional[str] = None
     ) -> List[Event]:
         query = self.db.query(Event)
-        
+
         if start_date:
             query = query.filter(Event.start_date >= start_date)
         if end_date:
@@ -74,5 +75,41 @@ class EventRepository(BaseRepository):
             query = query.filter(Event.type == event_type)
         if location:
             query = query.filter(Event.location.ilike(f"%{location}%"))
-            
+
         return query.all()
+
+    def start_event(self, event_uuid) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.uuid == event_uuid)
+            .where(Event.status == EventStatus.SCHEDULED)
+            .values(status=EventStatus.ACTIVE)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
+
+    def end_event(self, event_uuid) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.uuid == event_uuid)
+            .where(Event.status == EventStatus.ACTIVE)
+            .values(status=EventStatus.FINISHED)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
+
+    def cancel_event(self, event_uuid) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.uuid == event_uuid)
+            .where(Event.status == EventStatus.SCHEDULED)
+            .values(status=EventStatus.CANCELLED)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount
