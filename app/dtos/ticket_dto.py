@@ -10,6 +10,7 @@ from app.enums.ticket_status import TicketStatus
 # Shared properties
 class TicketBase(BaseModel):
     status: Optional[TicketStatus]
+    price: Optional[float] = None
 
 
 # Properties to receive on ticket creation
@@ -17,6 +18,7 @@ class TicketCreate(TicketBase):
     event_uuid: UUID
     order_uuid: UUID
     owner_uuid: UUID
+    area_uuid: UUID
 
 
 # Properties to receive on ticket update

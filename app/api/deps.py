@@ -1,6 +1,6 @@
-from typing import Generator
+from typing import Generator, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,8 @@ from app.repositories.event_repository import EventRepository
 from app.repositories.order_repository import OrderRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.space_repository import SpaceRepository
+from app.repositories.area_repository import AreaRepository
 from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.event_service import EventService
@@ -17,18 +19,21 @@ from app.services.order_cleanup_service import OrderCleanupService
 from app.services.order_service import OrderService
 from app.services.ticket_service import TicketService
 from app.services.user_service import UserService
+from app.services.space_service import SpaceService
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
 )
 
 
-def get_db() -> Generator:
+def get_db() -> Generator[Session, None, None]:
+    db: Optional[Session] = None
     try:
         db = SessionLocal()
         yield db
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
@@ -69,7 +74,7 @@ def get_event_repository(
 
 
 def get_event_service(
-        event_repository: EventRepository = Depends(get_event_repository),
+        event_repository: EventRepository = Depends(get_event_repository)
 ) -> EventService:
     return EventService(event_repository)
 
@@ -107,3 +112,23 @@ def get_order_cleanup_service(
         event_service: EventService = Depends(get_event_service),
 ) -> OrderCleanupService:
     return OrderCleanupService(db, oder_service, event_service)
+
+
+# New dependencies for spaces/areas
+def get_space_repository(
+        db: Session = Depends(get_db)
+) -> SpaceRepository:
+    return SpaceRepository(db)
+
+
+def get_area_repository(
+        db: Session = Depends(get_db)
+) -> AreaRepository:
+    return AreaRepository(db)
+
+
+def get_space_service(
+        space_repository: SpaceRepository = Depends(get_space_repository),
+        area_repository: AreaRepository = Depends(get_area_repository),
+) -> SpaceService:
+    return SpaceService(space_repository, area_repository)

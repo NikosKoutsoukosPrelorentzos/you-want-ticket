@@ -10,6 +10,7 @@ from app.enums.order_status import OrderStatus
 class OrderBase(BaseModel):
     status: Optional[OrderStatus]
     number_of_tickets: Optional[int] = None
+    amount: Optional[float] = None
 
 
 # Properties to receive on order creation

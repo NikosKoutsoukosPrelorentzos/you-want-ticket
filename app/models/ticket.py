@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Enum as SAEnum, Float
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base_class import Base
@@ -19,3 +19,5 @@ class Ticket(Base):
     event_uuid = Column(UUID, ForeignKey("event.uuid"))
     order_uuid = Column(UUID, ForeignKey("order.uuid"))
     owner_uuid = Column(UUID, ForeignKey("user.uuid"))
+    area_uuid = Column(UUID, ForeignKey("area.uuid"))
+    price = Column(Float)

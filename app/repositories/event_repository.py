@@ -21,7 +21,8 @@ class EventRepository(BaseRepository):
             start_date=event_create_request.start_date,
             end_date=event_create_request.end_date,
             location=event_create_request.location,
-            available_number_of_tickets=event_create_request.available_number_of_tickets
+            available_number_of_tickets=event_create_request.available_number_of_tickets,
+            space_uuid=event_create_request.space_uuid
         )
         self.db.add(db_event)
         self.db.commit()

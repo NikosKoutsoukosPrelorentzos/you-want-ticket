@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Enum as SAEnum, Float
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base_class import Base
@@ -25,3 +25,5 @@ class Event(Base):
     status: EventStatus = Column(SAEnum(EventStatus), default=EventStatus.SCHEDULED)
     location = Column(String, index=True)
     available_number_of_tickets = Column(Integer)
+    starting_price = Column(Float)
+    space_uuid = Column(UUID(as_uuid=True), ForeignKey("space.uuid"))
