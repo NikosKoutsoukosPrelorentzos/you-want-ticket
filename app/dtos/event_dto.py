@@ -30,6 +30,7 @@ class EventCreate(EventBase):
     end_date: datetime
     location: str
     available_number_of_tickets: int
+    space_uuid: Optional[UUID] = None
 
 
 # Properties to receive on event update

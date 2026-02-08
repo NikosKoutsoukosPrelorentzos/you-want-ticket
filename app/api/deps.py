@@ -1,10 +1,12 @@
 from typing import Generator, Optional
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.scheduler import get_scheduler
 from app.db.session import SessionLocal
 from app.repositories.event_repository import EventRepository
 from app.repositories.order_repository import OrderRepository
@@ -74,9 +76,10 @@ def get_event_repository(
 
 
 def get_event_service(
-        event_repository: EventRepository = Depends(get_event_repository)
+        event_repository: EventRepository = Depends(get_event_repository),
+        scheduler: BackgroundScheduler = Depends(get_scheduler)
 ) -> EventService:
-    return EventService(event_repository)
+    return EventService(event_repository, scheduler)
 
 
 def get_order_repository(
