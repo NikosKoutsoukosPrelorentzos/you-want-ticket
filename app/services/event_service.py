@@ -16,27 +16,12 @@ logger = setup_logger(__name__)
 
 
 class EventService:
-    def __init__(self, event_repository: EventRepository, scheduler: BaseScheduler):
-        self.scheduler = scheduler
+    def __init__(self, event_repository: EventRepository):
         self.event_repository = event_repository
 
     def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> EventDTO:
         self._validations(event_create_request)
         db_event = self.event_repository.create_event(event_create_request, user_uuid)
-        self.scheduler.add_job(
-            self._start_event,
-            "date",
-            run_date=event_create_request.start_date,
-            id=f"{db_event.uuid}_start",
-            replace_existing=True
-        )
-        self.scheduler.add_job(
-            self._end_event,
-            "date",
-            run_date=event_create_request.end_date,
-            id=f"{db_event.uuid}_end",
-            replace_existing=True
-        )
         return EventDTO.model_validate(db_event)
 
     @staticmethod
@@ -86,20 +71,6 @@ class EventService:
             location=location
         )
         return [EventDTO.model_validate(event) for event in db_events]
-
-    def _start_event(self, event_uuid: UUID) -> int:
-        logger.info(f"Starting event with UUID: {event_uuid}")
-        result = self.event_repository.start_event(event_uuid)
-        if result == 0:
-            raise HTTPException(status_code=404, detail="Event not found")
-        return result
-
-    def _end_event(self, event_uuid: UUID) -> int:
-        logger.info(f"Ending event with UUID: {event_uuid}")
-        result = self.event_repository.end_event(event_uuid)
-        if result == 0:
-            raise HTTPException(status_code=404, detail="Event not found")
-        return result
 
     def cancel_event(self, event_uuid: UUID, user_uuid: UUID):
         logger.info(f"Canceling event with UUID: {event_uuid}")

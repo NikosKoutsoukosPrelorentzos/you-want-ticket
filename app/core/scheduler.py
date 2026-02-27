@@ -1,8 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.api.deps import get_order_cleanup_service, get_event_repository, get_db, get_order_repository, \
-    get_event_service, get_order_service
 from app.core.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -51,6 +49,9 @@ def __run_order_cleanup_job():
     Job function that creates a new DB session, runs the cleanup service,
     and then closes the session.
     """
+    from app.api.deps import get_order_cleanup_service, get_event_repository, get_db, get_order_repository, \
+        get_event_service, get_order_service, get_ticket_service, get_ticket_repository
+
     logger.info("Starting scheduled order cleanup job...")
     db_gen = get_db()
 
@@ -58,8 +59,10 @@ def __run_order_cleanup_job():
     try:
         event_repository = get_event_repository(db)
         order_repository = get_order_repository(db)
+        ticket_repository = get_ticket_repository(db)
         event_service = get_event_service(event_repository)
-        order_service = get_order_service(order_repository, event_service)
+        ticket_service = get_ticket_service(ticket_repository, event_repository)
+        order_service = get_order_service(order_repository, event_service, ticket_service)
         service = get_order_cleanup_service(db, order_service, event_service)
 
         service.cancel_expired_orders()

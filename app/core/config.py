@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     SQLALCHEMY_DATABASE_URI: str = (
-        "postgresql://user:password@localhost:5433/you-want-ticket"
+        "postgresql://user:password@localhost:5434/you_want_ticket"
     )
 
     class Config:
