@@ -9,6 +9,7 @@ from app.dtos.order_dto import OrderCreate, OrderDTO
 from app.dtos.ticket_dto import TicketCreate, TicketDTO
 from app.enums.ticket_status import TicketStatus
 from app.repositories.order_repository import OrderRepository
+from app.services.email_service import EmailService
 from app.services.event_service import EventService
 from app.enums.order_status import OrderStatus
 from app.services.ticket_service import TicketService
@@ -72,6 +73,7 @@ class OrderService:
             ]
             tickets: list[TicketDTO] = self.ticket_service.create_tickets(ticket_requests)
             self.order_repository.commit()
+            EmailService.send_email()
             return tickets
         except Exception as e:
             logger.error(e)
