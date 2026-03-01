@@ -3,8 +3,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from app.enums.user_role import UserRole
+
 
 class UserBase(BaseModel):
+    user_role: UserRole = UserRole.CUSTOMER
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = True
 

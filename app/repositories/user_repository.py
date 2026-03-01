@@ -13,6 +13,7 @@ class UserRepository(BaseRepository):
             email=user_in.email,
             hashed_password=get_password_hash(user_in.password),
             is_active=user_in.is_active,
+            user_role=user_in.user_role
         )
         self.db.add(db_obj)
         self.db.commit()

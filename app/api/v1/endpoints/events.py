@@ -8,6 +8,7 @@ from starlette.responses import JSONResponse
 
 from app.api import deps
 from app.core.logger import setup_logger
+from app.core.role_checker import organizer_checker
 from app.dtos.event_dto import EventDTO, EventCreate
 from app.dtos.user_dto import UserDTO
 from app.services.event_service import EventService
@@ -21,7 +22,7 @@ logger = setup_logger(__name__)
 def create_event(
         event_create_request: EventCreate,
         event_service: EventService = Depends(deps.get_event_service),
-        current_user: UserDTO = Depends(deps.get_current_active_user)
+        current_user: UserDTO = Depends(organizer_checker),
 ) -> EventDTO:
     try:
         logger.info(f"Creating event for user: {current_user.email}")
