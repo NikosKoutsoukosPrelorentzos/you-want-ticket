@@ -7,6 +7,7 @@ from sqlalchemy import UUID
 from app.core.logger import setup_logger
 from app.dtos.order_dto import OrderCreate, OrderDTO
 from app.dtos.ticket_dto import TicketCreate, TicketDTO
+from app.dtos.user_dto import UserDTO
 from app.enums.ticket_status import TicketStatus
 from app.repositories.order_repository import OrderRepository
 from app.services.email_service import EmailService
@@ -50,30 +51,32 @@ class OrderService:
             raise HTTPException(status_code=409, detail=f"Fail to cancel order: {order_uuid}")
         return result
 
-    def finalize_order_by_user(self, order_uuid: UUID, user_uuid: UUID) -> list[TicketDTO]:
+    def finalize_order_by_user(self, order_uuid: UUID, user: UserDTO) -> list[TicketDTO]:
         db_order = self.order_repository.get_order_by_uuid(order_uuid)
         if not db_order:
             raise HTTPException(status_code=404, detail=f"Order not found: {order_uuid}")
-        if db_order.owner_uuid != user_uuid:
+        if db_order.owner_uuid != user.uuid:
             raise HTTPException(status_code=403, detail="Not authorized to finalize this order")
         if db_order.status != OrderStatus.IN_PROGRESS:
             raise HTTPException(status_code=409, detail=f"Order is not in progress: {order_uuid}")
         try:
-            result: int = self.order_repository.finalize_order_by_user(order_uuid, user_uuid)
+            result: int = self.order_repository.finalize_order_by_user(order_uuid, user.uuid)
             if result == 0:
                 raise HTTPException(status_code=409, detail=f"Fail to finalize order: {order_uuid}")
             ticket_requests = [
                 TicketCreate(
                     event_uuid=db_order.event_uuid,
                     order_uuid=db_order.uuid,
-                    owner_uuid=user_uuid,
+                    owner_uuid=user.uuid,
                     status=TicketStatus.SCHEDULED
                 )
                 for _ in range(db_order.number_of_tickets)
             ]
             tickets: list[TicketDTO] = self.ticket_service.create_tickets(ticket_requests)
+            for ticket in tickets:
+                ticket.qr_code = self.ticket_service.generate_ticket_qr_code(ticket.uuid)
+            EmailService.send_email(user.email, tickets)
             self.order_repository.commit()
-            EmailService.send_email()
             return tickets
         except Exception as e:
             logger.error(e)

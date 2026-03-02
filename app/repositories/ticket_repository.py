@@ -34,11 +34,11 @@ class TicketRepository(BaseRepository):
         result = self.db.execute(stmt)
         return result.rowcount
 
-    def finalize_ticket(self, ticket_uuid: UUID) -> int:
+    def scan_ticket(self, ticket_uuid: UUID) -> int:
         stmt = (update(Ticket)
                 .where(Ticket.uuid == ticket_uuid)
                 .where(Ticket.status == TicketStatus.SCHEDULED)
-                .values(status=TicketStatus.FINALIZED)
+                .values(status=TicketStatus.SCANNED)
                 )
         result = self.db.execute(stmt)
         return result.rowcount

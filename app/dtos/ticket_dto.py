@@ -37,7 +37,8 @@ class TicketInDBBase(TicketBase):
 
 # Properties to return to client
 class TicketDTO(TicketInDBBase):
-    pass
+    # QR code is returned as a Base64-encoded PNG string (data only, no mime prefix)
+    qr_code: Optional[str] = None
 
 
 # Properties stored in DB

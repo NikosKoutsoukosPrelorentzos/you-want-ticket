@@ -44,7 +44,7 @@ def finalize_order(
 ) -> list[TicketDTO]:
     try:
         logger.info(f"Finalizing order: {order_uuid} for user: {current_user.email}")
-        return order_service.finalize_order_by_user(order_uuid, current_user.uuid)
+        return order_service.finalize_order_by_user(order_uuid, current_user)
     except HTTPException as e:
         logger.error(e)
         raise e

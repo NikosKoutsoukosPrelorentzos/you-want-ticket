@@ -7,3 +7,4 @@ class TicketStatus(str, Enum):
     COMPLETED = "COMPLETED"
     EXPIRED = "EXPIRED"
     CANCELLED = "CANCELLED"
+    SCANNED = "SCANNED"

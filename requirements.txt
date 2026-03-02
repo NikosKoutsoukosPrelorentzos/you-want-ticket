@@ -16,3 +16,4 @@ flake8
 mypy
 apscheduler
 resend
+qrcode[pil]
