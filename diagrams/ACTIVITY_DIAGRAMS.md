@@ -1,73 +1,121 @@
 # Activity Diagrams
 
-This document contains Activity Diagrams representing the operational flows of the "You Want Ticket" system using PlantUML.
+This document contains Activity Diagrams representing the operational flows of the "You Want Ticket" system, organized by complexity levels.
 
-## 1. Create Event Process
-This diagram shows the steps taken by an organizer to create a new event, including validation and scheduling.
+---
 
+## Version 1: Core User & Event CRUD
+This version focus on the basic administrative and user account management flows.
+
+### 1.1 User Registration
 ```plantuml
 @startuml
-title Create Event Activity Diagram
+title User Registration Activity Diagram
 start
-:Organizer submits event details (EventCreate);
-if (Start date < End date?) then (yes)
-  if (Available tickets > 0?) then (yes)
-    :Save Event to Database (Status: SCHEDULED);
-    :Schedule 'Start Event' job (APScheduler);
-    :Schedule 'End Event' job (APScheduler);
-    :Return EventDTO (201 Created);
-    stop
-  else (no)
-    :Raise HTTPException (400: Invalid tickets);
-    stop
-  endif
+:User submits registration details (UserCreate);
+:Validate input (email, password complexity);
+if (Email already exists?) then (yes)
+  :Raise HTTPException (400: Email registered);
+  stop
 else (no)
-  :Raise HTTPException (400: Invalid dates);
+  :Hash password (bcrypt);
+  :Save User to Database;
+  :Return UserDTO (201 Created);
   stop
 endif
 @enduml
 ```
 
+### 1.2 User Login
+```plantuml
+@startuml
+title User Login Activity Diagram
+start
+:User submits credentials (email, password);
+:Query User by email;
+if (User exists?) then (yes)
+  :Verify hashed password;
+  if (Password valid?) then (yes)
+    :Generate JWT Access Token;
+    :Return TokenDTO;
+    stop
+  else (no)
+    :Raise HTTPException (401: Unauthorized);
+    stop
+  endif
+else (no)
+  :Raise HTTPException (401: Unauthorized);
+  stop
+endif
+@enduml
+```
+
+### 1.3 Event Management (CRUD)
+```plantuml
+@startuml
+title Event Management Activity Diagram
+|Organizer|
+start
+:Choose Action (Create, List, Cancel);
+if (Action == Create) then (yes)
+  :Submit Event details;
+  if (Dates and Tickets valid?) then (yes)
+    :Save Event (Status: SCHEDULED);
+    :Schedule start/end jobs;
+    :Return EventDTO;
+  else (no)
+    :Return 400 Bad Request;
+  endif
+elseif (Action == List) then (yes)
+  :Request Events with filters;
+  :Query DB for active events;
+  :Return list of EventDTOs;
+else (Action == Cancel)
+  :Submit Event UUID;
+  :Check if Event exists and belongs to user;
+  :Update status to CANCELLED;
+  :Cancel scheduled jobs;
+  :Return 200 OK;
+endif
+stop
+@enduml
+```
+
 ---
 
-## 2. Ticket Purchase Lifecycle
-This diagram illustrates the two-step process: creating an initial order and then finalizing it to receive tickets.
+## Version 2: Integrated Purchase Flow
+This version combines authentication, event discovery, and the ticketing lifecycle into a single user journey.
 
 ```plantuml
 @startuml
-title Ticket Purchase Lifecycle
+title Integrated Ticket Purchase Journey
 |Customer|
 start
-:Submit Order Request (Event, Quantity);
+:Login to application;
+|Auth Service|
+:Validate credentials and return JWT;
+|Customer|
+:Browse available Events (Filtered);
+|Event Service|
+:Return list of active events;
+|Customer|
+:Select Event and specify Quantity;
 |Order Service|
-:Check Event existence and dates;
-if (Event has not passed?) then (yes)
-  :Check ticket availability;
-  if (Available >= Quantity?) then (yes)
-    :Remove tickets from Event inventory;
-    :Create Order (Status: IN_PROGRESS);
-    :Return OrderDTO;
-    |Customer|
-    :Review Order;
-    :Submit Finalize Request;
-    |Order Service|
-    :Verify Order status and owner;
-    if (Status is IN_PROGRESS?) then (yes)
-      :Update Order status (COMPLETED);
-      :Generate Ticket records;
-      :Commit transaction;
-      :Return list of TicketDTOs;
-      stop
-    else (no)
-      :Raise HTTPException (409: Conflict);
-      stop
-    endif
-  else (no)
-    :Raise HTTPException (400: Not enough tickets);
-    stop
-  endif
+:Check availability (Lock inventory);
+if (Tickets available?) then (yes)
+  :Create Order (Status: IN_PROGRESS);
+  :Return OrderDTO;
+  |Customer|
+  :Confirm/Pay for Order;
+  |Order Service|
+  :Finalize Order;
+  :Update status to COMPLETED;
+  :Generate Ticket records;
+  |Customer|
+  :Receive TicketDTOs;
+  stop
 else (no)
-  :Raise HTTPException (400: Event has passed);
+  :Notify: "Sold Out" or "Insufficient Quantity";
   stop
 endif
 @enduml
@@ -75,9 +123,10 @@ endif
 
 ---
 
-## 3. Expired Order Cleanup (Background Task)
-This background process ensures that tickets held by unfinalized orders are released back to the event inventory after a timeout.
+## Version 3: Advanced System Tasks
+This version includes background maintenance and automated state transitions.
 
+### 3.1 Expired Order Cleanup (Background Task)
 ```plantuml
 @startuml
 title Expired Order Cleanup
@@ -101,6 +150,7 @@ stop
 ```
 
 ### Key Workflow Principles
-- **Inventory Locking:** Tickets are temporarily "locked" (removed from inventory) as soon as an order is created to prevent overbooking.
-- **Fail-Safe Cleanup:** The background cleanup service prevents permanent loss of inventory from abandoned or timed-out carts.
-- **Atomic Operations:** Most service actions are wrapped in transactions (commit/rollback) to ensure data consistency.
+- **Identity First:** Most operations (except registration/login) require a valid JWT.
+- **Inventory Locking:** Tickets are temporarily "locked" during the `IN_PROGRESS` order phase.
+- **Fail-Safe Cleanup:** Background processes ensure data consistency if users abandon their carts.
+- **State Driven:** Events and Orders move through strictly defined enums (SCHEDULED, ACTIVE, COMPLETED, CANCELLED).
