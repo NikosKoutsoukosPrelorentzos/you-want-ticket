@@ -1,94 +1,153 @@
 # Component Diagrams
 
-This document illustrates the structural architecture of the "You Want Ticket" system using PlantUML Component Diagrams.
+This document illustrates the structural architecture of the "You Want Ticket" system, organized by complexity levels.
 
-## 1. High-Level System Components
-The system is divided into three primary layers: the **API Layer** (FastAPI), the **Service Layer** (Business Logic), and the **Infrastructure Layer** (Data Access and External Services).
+---
+
+## Version 1: Core User & Event Architecture
+This version focuses on the basic administrative and identity management layers, excluding ticketing and orders.
 
 ```plantuml
 @startuml
-title You Want Ticket - System Components
+allowmixing
+title Version 1 - Core User & Event Components
 
-package "Client Application" {
-  [Web/Mobile Client] as Client
+package "Client" {
+  component "Web/Mobile Client" as Client
 }
 
 package "FastAPI Application" {
   component "API Layer" as API {
-    [Auth Middleware]
-    [Events Controller]
-    [Orders Controller]
-    [Users Controller]
+    component "Auth Middleware" as AM
+    component "Users Controller" as UC
+    component "Events Controller" as EC
   }
 
   component "Service Layer" as Service {
-    [Auth Service]
-    [Event Service]
-    [Order Service]
-    [Ticket Service]
-    [Order Cleanup Service]
+    component "Auth Service" as AS
+    component "User Service" as US
+    component "Event Service" as ES
   }
 
   component "Data Access Layer" as DAL {
-    [Event Repository]
-    [Order Repository]
-    [Ticket Repository]
-    [User Repository]
+    component "User Repository" as UR
+    component "Event Repository" as ER
   }
 }
 
-package "External Infrastructure" {
-  database "PostgreSQL DB" as DB
-  component "APScheduler" as Scheduler
-}
+database "PostgreSQL DB" as DB
 
-Client --> API : HTTP/REST
-API --> Service : Dependency Injection
-Service --> DAL : Dependency Injection
-Service --> Scheduler : Job Registration
-DAL --> DB : SQLAlchemy (Engine/Session)
+Client --> AM : "Bearer Token"
+AM --> UC : "Authorize"
+AM --> EC : "Authorize"
+
+UC --> US : "Business Logic"
+EC --> ES : "Business Logic"
+
+US --> UR : "Data Access"
+ES --> ER : "Data Access"
+AS --> UR : "Verify Credentials"
+
+UR --> DB
+ER --> DB
 @enduml
 ```
 
 ---
 
-## 2. Service-Level Dependencies
-This diagram shows how individual services collaborate to fulfill complex business processes, such as order finalization.
+## Version 2: Integrated Ticketing System
+This version introduces the purchase lifecycle, showing how the Order and Ticket components integrate with the existing services.
 
 ```plantuml
 @startuml
-title Service-Level Dependencies
+allowmixing
+title Version 2 - Integrated Purchase Architecture
 
-package "Services" {
-  [Order Service] as OS
-  [Event Service] as ES
-  [Ticket Service] as TS
-  [Auth Service] as AS
+package "API Layer" {
+  component "Events Controller" as EC
+  component "Orders Controller" as OC
 }
 
-package "Repositories" {
-  [Order Repository] as OR
-  [Event Repository] as ER
-  [Ticket Repository] as TR
-  [User Repository] as UR
+package "Service Layer" {
+  component "Order Service" as OS
+  component "Event Service" as ES
+  component "Ticket Service" as TS
 }
 
-OS ..> ES : "Validates Availability"
-OS ..> TS : "Generates Tickets"
-OS ..> OR : "Data Access"
+package "Data Access Layer" {
+  component "Order Repository" as OR
+  component "Event Repository" as ER
+  component "Ticket Repository" as TR
+}
 
-ES ..> ER : "Data Access"
-TS ..> TR : "Data Access"
-TS ..> ER : "Fetches Event Info"
-AS ..> UR : "Verifies Credentials"
+database "PostgreSQL DB" as DB
 
+OC --> OS : "Process Purchase"
+EC --> ES : "Event Mgmt"
+
+' Cross-Service Dependencies
+OS --> ES : "Check/Lock Inventory"
+OS --> TS : "Trigger Ticket Issuance"
+
+' DAL Mappings
+OS --> OR
+ES --> ER
+TS --> TR
+TS --> ER : "Fetch Event Details"
+
+OR --> DB
+ER --> DB
+TR --> DB
+@enduml
+```
+
+---
+
+## Version 3: Full System Architecture
+The complete system, including background maintenance services and external job scheduling.
+
+```plantuml
+@startuml
+allowmixing
+title Version 3 - Full System with Background Tasks
+
+package "FastAPI Application" {
+  component "API Layer" as API
+  
+  component "Service Layer" as Service {
+    component "Order Service" as OS
+    component "Event Service" as ES
+    component "Order Cleanup Service" as OCS
+  }
+
+  component "Data Access Layer" as DAL {
+    component "Order Repository" as OR
+    component "Event Repository" as ER
+  }
+}
+
+package "Infrastructure" {
+  database "PostgreSQL DB" as DB
+  component "APScheduler" as Scheduler
+}
+
+' Interactions
+ES --> Scheduler : "Register Start/End Jobs"
+Scheduler --> Service : "Trigger Transitions"
+
+' Cleanup Logic
+OCS --> OR : "Identify Expired"
+OCS --> ER : "Restore Tickets"
+Scheduler --> OCS : "Trigger Every 5 Min"
+
+DAL --> DB
 @enduml
 ```
 
 ### Component Breakdown
-- **API Layer:** Handles request routing, parameter validation (via Pydantic), and HTTP response formatting. It is the entry point for all external traffic.
-- **Service Layer:** The core of the application. It orchestrates business processes and ensures that complex operations (like decrementing inventory and creating an order) are executed within a consistent transaction.
-- **Data Access Layer (DAL):** Encapsulates SQLAlchemy logic, keeping the service layer decoupled from the specific ORM implementation and SQL queries.
+- **API Layer:** Handles request routing, parameter validation, and security (JWT).
+- **Service Layer:** Orchestrates business rules. In the full system, it includes **Orchestrators** (OrderService) and **Background Services** (OrderCleanupService).
+- **Data Access Layer (DAL):** Decouples the service logic from SQLAlchemy and the database schema.
 - **Infrastructure:**
-    - **APScheduler:** An in-process scheduler used for time-sensitive tasks like automatically starting/ending events or cleaning up expired orders.
-    - **PostgreSQL:** The persistent data store for all entities (Events, Users, Orders, Tickets).
+    - **APScheduler:** Manages the lifecycle of events and ensures unfinalized orders are cleaned up automatically.
+    - **PostgreSQL:** The single source of truth for all persistent data.

@@ -1,32 +1,65 @@
 # Deployment Diagrams
 
-This document illustrates the physical deployment architecture of the "You Want Ticket" system using PlantUML Deployment Diagrams.
+This document illustrates the physical deployment architecture of the "You Want Ticket" system, organized by complexity levels.
 
-## 1. Local Development Deployment
-The current development environment uses a combination of a locally running FastAPI application and a containerized PostgreSQL database.
+---
+
+## Version 1: Core Development Deployment
+This version represents the initial local setup focused on User and Event management.
 
 ```plantuml
 @startuml
-title Local Development Deployment
+allowmixing
+title Version 1 - Local Development (Basic)
 
 node "Developer Machine" {
-  node "Python Virtual Environment" {
+  node "Python Environment" {
     artifact "FastAPI Application" as app
-    artifact "Uvicorn Server" as server
-    app -- server
+    component "User/Event Services" as logic
+    app -- logic
   }
 
   node "Docker Engine" {
-    node "PostgreSQL Container" {
-      database "PostgreSQL DB" as db
-    }
+    database "PostgreSQL DB" as db
   }
 
-  server -- db : "SQLAlchemy / TCP (Port 5433:5432)"
+  app -- db : "SQLAlchemy / TCP (Port 5433:5432)"
 }
 
 cloud "External Client" {
-  [Web Browser / Postman] as client
+  component "Postman / CLI" as client
+}
+
+client -- app : "HTTP (Port 8000)"
+@enduml
+```
+
+---
+
+## Version 2: Integrated Development (Docker Compose)
+This version containerizes the entire stack and includes the integrated ticketing and order flows.
+
+```plantuml
+@startuml
+allowmixing
+title Version 2 - Containerized Local Stack
+
+node "Docker Compose Environment" {
+  node "Container: FastAPI App" {
+    artifact "Uvicorn Server" as server
+    component "Auth/Event/Order/Ticket Services" as services
+    server -- services
+  }
+
+  node "Container: Database" {
+    database "PostgreSQL DB" as db
+  }
+
+  server -- db : "Internal Network (Port 5432)"
+}
+
+cloud "External Client" {
+  component "Web Browser / Mobile" as client
 }
 
 client -- server : "HTTP (Port 8000)"
@@ -35,36 +68,48 @@ client -- server : "HTTP (Port 8000)"
 
 ---
 
-## 2. Typical Production Deployment (Target)
-A standard production deployment would typically involve a container orchestration platform (like Kubernetes or Docker Swarm) with a load balancer.
+## Version 3: Full System & Production Readiness
+The final architecture including background task execution (internal scheduler) and production infrastructure components.
 
 ```plantuml
 @startuml
-title Target Production Deployment
+allowmixing
+title Version 3 - Production Ready Architecture
 
 cloud "Internet" as internet
 
-node "Load Balancer (e.g., Nginx / AWS ALB)" as lb
+node "Infrastructure Node" {
+  node "Load Balancer (Nginx / ALB)" as lb
+}
 
-node "Application Node" as app_node {
-  node "Docker Container: API" {
-    artifact "FastAPI App" as api_pod
+node "Application Node" {
+  node "FastAPI Container" {
+    artifact "App Code" as code
+    component "Business Services" as logic
+    component "APScheduler (Internal)" as scheduler
+    code -- logic
+    logic -- scheduler : "In-Process"
   }
 }
 
-node "Database Node (e.g., AWS RDS / Managed DB)" as db_node {
-  database "PostgreSQL Instance" as prod_db
+node "Managed Database" {
+  database "PostgreSQL Instance" as db
 }
 
 internet -- lb : "HTTPS (Port 443)"
-lb -- api_pod : "HTTP (Port 8000)"
-api_pod -- prod_db : "TCP (Port 5432)"
+lb -- code : "HTTP (Port 8000)"
+logic -- db : "TCP (Port 5432)"
 
+cloud "User Devices" {
+  component "Web App / Mobile App" as client
+}
+
+client -- internet
 @enduml
 ```
 
 ### Deployment Details
-- **Environment Management:** Python dependencies are managed within a virtual environment (`.venv`), and configuration is handled via Pydantic Settings, which reads from environment variables.
-- **Containerization:** The PostgreSQL database is containerized for easy setup and consistency across development machines.
-- **Networking:** In local development, the application connects to the database via `localhost:5433`. In a containerized or production environment, this would typically point to a service name (e.g., `db:5432`) or a managed database endpoint.
-- **Scalability:** The stateless nature of the FastAPI application allows it to be easily scaled horizontally behind a load balancer.
+- **Environment Management:** Python dependencies are managed via `.venv`, and configuration is handled via environment variables (Pydantic Settings).
+- **Process Context:** The **APScheduler** runs as a background thread within the FastAPI process (internal), ensuring it has direct access to the application context and database sessions.
+- **Networking:** Development uses Port 5433 (mapping to 5432), while production uses standard internal networking or managed service endpoints.
+- **Security:** Production environments enforce HTTPS at the Load Balancer level before traffic enters the Application Node.
