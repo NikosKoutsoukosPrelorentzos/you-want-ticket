@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional, List
 
+from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.base import BaseScheduler
 from fastapi import HTTPException
 from sqlalchemy import UUID
 
 from app.core.logger import setup_logger
-from app.dtos.event_dto import EventCreate, EventDTO
+from app.dtos.event_dto import EventCreate, EventDTO, EventUpdate
 from app.enums.event_status import EventStatus
 from app.models.event import Event
 from app.repositories.event_repository import EventRepository
@@ -16,13 +17,41 @@ logger = setup_logger(__name__)
 
 
 class EventService:
-    def __init__(self, event_repository: EventRepository):
+    def __init__(self, event_repository: EventRepository, scheduler: Optional[BaseScheduler] = None):
         self.event_repository = event_repository
+        self.scheduler = scheduler
 
     def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> EventDTO:
         self._validations(event_create_request)
         db_event = self.event_repository.create_event(event_create_request, user_uuid)
         return EventDTO.model_validate(db_event)
+
+    def update_event(self, event_uuid: UUID, event_update_request: EventUpdate, user_uuid: UUID) -> EventDTO:
+        logger.info(f"Updating event with UUID: {event_uuid}")
+
+        db_event = self.event_repository.get_event_by_uuid(event_uuid)
+        if not db_event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        if db_event.owner_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Not authorized to update this event")
+        if db_event.status != EventStatus.SCHEDULED:
+            raise HTTPException(status_code=409, detail="Only scheduled events can be updated")
+
+        start_date = event_update_request.start_date or db_event.start_date
+        end_date = event_update_request.end_date or db_event.end_date
+        if start_date and end_date and start_date > end_date:
+            raise HTTPException(status_code=400, detail="Start date must be before end date")
+
+        if (
+                event_update_request.available_number_of_tickets is not None
+                and event_update_request.available_number_of_tickets <= 0
+        ):
+            raise HTTPException(status_code=400, detail="Available number of tickets must be greater than 0")
+
+        updated_event = self.event_repository.update_event(event_uuid, event_update_request)
+        if not updated_event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return EventDTO.model_validate(updated_event)
 
     @staticmethod
     def _validations(event_create_request: EventCreate):
@@ -75,6 +104,8 @@ class EventService:
     def cancel_event(self, event_uuid: UUID, user_uuid: UUID):
         logger.info(f"Canceling event with UUID: {event_uuid}")
         db_event: Event = self.event_repository.get_event_by_uuid(event_uuid)
+        if not db_event:
+            raise HTTPException(status_code=404, detail="Event not found")
         if db_event.owner_uuid != user_uuid:
             raise HTTPException(status_code=403, detail="Not authorized to cancel this event")
         if db_event.status != EventStatus.SCHEDULED:
@@ -82,6 +113,11 @@ class EventService:
         result: int = self.event_repository.cancel_event(event_uuid)
         if result == 0:
             raise HTTPException(status_code=404, detail="Event not found")
-        self.scheduler.remove_job(f"{event_uuid}_start")
-        self.scheduler.remove_job(f"{event_uuid}_end")
+        if self.scheduler:
+            for job_suffix in ("start", "end"):
+                job_id = f"{event_uuid}_{job_suffix}"
+                try:
+                    self.scheduler.remove_job(job_id)
+                except JobLookupError:
+                    logger.warning(f"Scheduler job not found during cancellation: {job_id}")
         return

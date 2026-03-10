@@ -13,6 +13,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    user_role: UserRole = UserRole.CUSTOMER
     email: EmailStr
     password: str
 

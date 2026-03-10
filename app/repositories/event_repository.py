@@ -6,7 +6,7 @@ from sqlalchemy import update
 
 from app.enums.event_status import EventStatus
 from app.models.event import Event
-from app.dtos.event_dto import EventCreate
+from app.dtos.event_dto import EventCreate, EventUpdate
 from app.enums.event_type import EventType
 from app.repositories.base_repository import BaseRepository
 
@@ -113,3 +113,16 @@ class EventRepository(BaseRepository):
         result = self.db.execute(stmt)
         self.db.commit()
         return result.rowcount
+
+    def update_event(self, event_uuid: UUID, event_update_request: EventUpdate) -> Optional[Event]:
+        db_event = self.get_event_by_uuid(event_uuid)
+        if not db_event:
+            return None
+
+        update_data = event_update_request.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_event, key, value)
+
+        self.db.commit()
+        self.db.refresh(db_event)
+        return db_event

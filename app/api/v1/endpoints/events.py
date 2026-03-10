@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 from app.api import deps
 from app.core.logger import setup_logger
 from app.core.role_checker import organizer_checker
-from app.dtos.event_dto import EventDTO, EventCreate
+from app.dtos.event_dto import EventDTO, EventCreate, EventUpdate
 from app.dtos.user_dto import UserDTO
 from app.services.event_service import EventService
 from app.enums.event_type import EventType
@@ -88,6 +88,24 @@ def cancel_event(
         logger.info(f"Cancelling event with UUID: {event_uuid} for user: {current_user.email}")
         event_service.cancel_event(event_uuid, current_user.uuid)
         return JSONResponse(status_code=200, content={"message": "Event cancelled successfully"})
+    except HTTPException as e:
+        logger.error(e)
+        raise e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/{event_uuid}/update")
+def update_event(
+        event_uuid: UUID,
+        event_update_request: EventUpdate,
+        event_service: EventService = Depends(deps.get_event_service),
+        current_user: UserDTO = Depends(organizer_checker)
+) -> EventDTO:
+    try:
+        logger.info(f"Updating event with UUID: {event_uuid} for user: {current_user.email}")
+        return event_service.update_event(event_uuid, event_update_request, current_user.uuid)
     except HTTPException as e:
         logger.error(e)
         raise e
