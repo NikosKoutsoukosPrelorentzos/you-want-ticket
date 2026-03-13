@@ -24,4 +24,5 @@ class Event(Base):
     end_date = Column(DateTime, index=True)
     status: EventStatus = Column(SAEnum(EventStatus), default=EventStatus.SCHEDULED)
     location = Column(String, index=True)
+    place_uuid = Column(UUID(as_uuid=True), ForeignKey("place.uuid"))
     available_number_of_tickets = Column(Integer)

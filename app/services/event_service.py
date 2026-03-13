@@ -10,19 +10,28 @@ from app.core.logger import setup_logger
 from app.dtos.event_dto import EventCreate, EventDTO, EventUpdate
 from app.enums.event_status import EventStatus
 from app.models.event import Event
+from app.models.place import Place
 from app.repositories.event_repository import EventRepository
 from app.enums.event_type import EventType
+from app.repositories.place_repository import PlaceRepository
 
 logger = setup_logger(__name__)
 
 
 class EventService:
-    def __init__(self, event_repository: EventRepository, scheduler: Optional[BaseScheduler] = None):
+    def __init__(self, event_repository: EventRepository, place_repository: PlaceRepository,
+                 scheduler: Optional[BaseScheduler] = None):
         self.event_repository = event_repository
         self.scheduler = scheduler
+        self.place_repository = place_repository
 
     def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> EventDTO:
-        self._validations(event_create_request)
+        db_place = self.place_repository.get_place_by_uuid(event_create_request.place_uuid)
+        if not db_place:
+            raise HTTPException(status_code=404, detail="Place not found")
+        if db_place.owner_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Not authorized to create events for this place")
+        self._validations(event_create_request, db_place)
         db_event = self.event_repository.create_event(event_create_request, user_uuid)
         return EventDTO.model_validate(db_event)
 
@@ -42,10 +51,7 @@ class EventService:
         if start_date and end_date and start_date > end_date:
             raise HTTPException(status_code=400, detail="Start date must be before end date")
 
-        if (
-                event_update_request.available_number_of_tickets is not None
-                and event_update_request.available_number_of_tickets <= 0
-        ):
+        if event_update_request.available_number_of_tickets is not None and event_update_request.available_number_of_tickets <= 0:
             raise HTTPException(status_code=400, detail="Available number of tickets must be greater than 0")
 
         updated_event = self.event_repository.update_event(event_uuid, event_update_request)
@@ -54,11 +60,15 @@ class EventService:
         return EventDTO.model_validate(updated_event)
 
     @staticmethod
-    def _validations(event_create_request: EventCreate):
-        if event_create_request.start_date > event_create_request.end_date:
-            raise HTTPException(status_code=400, detail="Start date must be before end date")
+    def _validations(event_create_request: EventCreate, db_place: Place):
         if event_create_request.available_number_of_tickets <= 0:
             raise HTTPException(status_code=400, detail="Available number of tickets must be greater than 0")
+        if event_create_request.available_number_of_tickets > db_place.capacity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Available number of tickets ({event_create_request.available_number_of_tickets})")
+        if event_create_request.start_date > event_create_request.end_date:
+            raise HTTPException(status_code=400, detail="Start date must be before end date")
 
     def get_event_by_uuid(self, event_uuid: UUID) -> EventDTO:
         db_event = self.event_repository.get_event_by_uuid(event_uuid)
@@ -121,3 +131,7 @@ class EventService:
                 except JobLookupError:
                     logger.warning(f"Scheduler job not found during cancellation: {job_id}")
         return
+
+    def get_events_by_place_uuid(self, place_uuid: UUID) -> List[EventDTO]:
+        db_events = self.event_repository.get_events_by_place_uuid(place_uuid)
+        return [EventDTO.model_validate(event) for event in db_events]

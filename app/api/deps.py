@@ -11,9 +11,11 @@ from app.repositories.event_repository import EventRepository
 from app.repositories.order_repository import OrderRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.place_repository import PlaceRepository
 from app.dtos.user_dto import UserDTO
 from app.services.auth_service import AuthService
 from app.services.event_service import EventService
+from app.services.place_service import PlaceService
 from app.services.order_cleanup_service import OrderCleanupService
 from app.services.order_service import OrderService
 from app.services.ticket_service import TicketService
@@ -69,11 +71,18 @@ def get_event_repository(
     return EventRepository(db)
 
 
+def get_place_repository(
+        db: Session = Depends(get_db)
+) -> PlaceRepository:
+    return PlaceRepository(db)
+
+
 def get_event_service(
         event_repository: EventRepository = Depends(get_event_repository),
+        place_repository: PlaceRepository = Depends(get_place_repository),
         scheduler=Depends(get_scheduler),
 ) -> EventService:
-    return EventService(event_repository, scheduler)
+    return EventService(event_repository,place_repository, scheduler)
 
 
 def get_order_repository(
@@ -109,3 +118,10 @@ def get_order_cleanup_service(
         event_service: EventService = Depends(get_event_service),
 ) -> OrderCleanupService:
     return OrderCleanupService(db, oder_service, event_service)
+
+
+def get_place_service(
+        place_repository: PlaceRepository = Depends(get_place_repository),
+        event_repository: EventRepository = Depends(get_event_repository)
+) -> PlaceService:
+    return PlaceService(place_repository, event_repository)
