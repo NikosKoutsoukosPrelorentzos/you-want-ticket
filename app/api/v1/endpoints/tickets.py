@@ -23,6 +23,9 @@ def scan_ticket(
         logger.info(f"Scanning ticket: {ticket_uuid} by organizer: {current_user.email}")
         ticket_service.scan_ticket(ticket_uuid)
         return {"message": "Ticket scanned successfully"}
+    except HTTPException as e:
+        logger.error(e)
+        raise e
     except Exception as e:
         logger.error(f"Error scanning ticket: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -39,6 +42,9 @@ def get_ticket_qr_code(
         b64 = ticket_service.generate_ticket_qr_code(ticket_uuid)
         img_bytes = base64.b64decode(b64)
         return StreamingResponse(io.BytesIO(img_bytes), media_type="image/png")
+    except HTTPException as e:
+        logger.error(e)
+        raise e
     except Exception as e:
         logger.error(f"Error generating QR code for ticket: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

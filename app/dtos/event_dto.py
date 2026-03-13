@@ -18,6 +18,7 @@ class EventBase(BaseModel):
     status: Optional[EventStatus] = EventStatus.SCHEDULED
     location: Optional[str] = None
     available_number_of_tickets: Optional[int] = None
+    place_uuid: Optional[UUID] = None
 
 
 # Properties to receive on event creation
@@ -28,6 +29,7 @@ class EventCreate(EventBase):
     end_date: datetime
     location: str
     available_number_of_tickets: int
+    place_uuid: UUID
 
 
 # Properties to receive on event update
