@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 from app.api import deps
 from app.core.logger import setup_logger
@@ -12,6 +13,10 @@ from app.services.auth_service import AuthService
 router = APIRouter()
 logger = setup_logger(__name__)
 
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
 @router.post("/login/access-token", response_model=TokenDTO)
 def login_access_token(
     auth_service: AuthService = Depends(deps.get_auth_service),
@@ -19,6 +24,15 @@ def login_access_token(
 ) -> TokenDTO:
     logger.info(f"Login request received for user: {form_data.username}")
     return auth_service.login(email=form_data.username, password=form_data.password)
+
+
+@router.post("/login/google", response_model=TokenDTO)
+def login_google(
+    payload: GoogleLoginRequest,
+    auth_service: AuthService = Depends(deps.get_auth_service),
+) -> TokenDTO:
+    logger.info("Google login request received")
+    return auth_service.login_with_google(google_token=payload.id_token)
 
 
 @router.post("/test-token", response_model=UserDTO)
