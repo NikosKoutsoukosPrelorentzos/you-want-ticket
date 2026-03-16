@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS "event" (
     start_date TIMESTAMP,
     end_date TIMESTAMP,
     status VARCHAR(50) DEFAULT 'SCHEDULED',
-    location VARCHAR(255),
     place_uuid UUID REFERENCES "place"(uuid),
     available_number_of_tickets INTEGER
 );
@@ -58,7 +57,6 @@ CREATE INDEX IF NOT EXISTS ix_event_type ON "event" (type);
 CREATE INDEX IF NOT EXISTS ix_event_title ON "event" (title);
 CREATE INDEX IF NOT EXISTS ix_event_start_date ON "event" (start_date);
 CREATE INDEX IF NOT EXISTS ix_event_end_date ON "event" (end_date);
-CREATE INDEX IF NOT EXISTS ix_event_location ON "event" (location);
 CREATE INDEX IF NOT EXISTS ix_event_place_uuid ON "event" (place_uuid);
 
 CREATE TABLE IF NOT EXISTS "order" (

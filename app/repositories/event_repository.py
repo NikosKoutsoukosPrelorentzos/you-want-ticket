@@ -20,7 +20,6 @@ class EventRepository(BaseRepository):
             description=event_create_request.description,
             start_date=event_create_request.start_date,
             end_date=event_create_request.end_date,
-            location=event_create_request.location,
             available_number_of_tickets=event_create_request.available_number_of_tickets,
             place_uuid=event_create_request.place_uuid
         )
@@ -35,8 +34,7 @@ class EventRepository(BaseRepository):
     def get_events_by_start_date(self, start_date: datetime) -> list[type[Event]]:
         return self.db.query(Event).filter(Event.start_date == start_date).all()
 
-    def get_events_by_location(self, location: str) -> list[type[Event]]:
-        return self.db.query(Event).filter(Event.location == location).all()
+
 
     def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
         stmt = (
@@ -63,8 +61,7 @@ class EventRepository(BaseRepository):
             self,
             start_date: Optional[datetime] = None,
             end_date: Optional[datetime] = None,
-            event_type: Optional[EventType] = None,
-            location: Optional[str] = None
+            event_type: Optional[EventType] = None
     ) -> List[Event]:
         query = self.db.query(Event)
 
@@ -74,8 +71,7 @@ class EventRepository(BaseRepository):
             query = query.filter(Event.end_date <= end_date)
         if event_type:
             query = query.filter(Event.type == event_type)
-        if location:
-            query = query.filter(Event.location.ilike(f"%{location}%"))
+
 
         return query.all()
 

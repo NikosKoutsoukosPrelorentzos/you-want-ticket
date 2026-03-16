@@ -43,7 +43,7 @@ O --> UC5
 ### Version 1 Use Case Descriptions
 - **Register Account:** A new user provides an email and password to create an account.
 - **Login / Authenticate:** A user logs in to receive a JWT token for authorized requests.
-- **View Events:** Users can browse all events with optional filters (date, location, type).
+- **View Events:** Users can browse all events with optional filters (date, place, type).
 - **Create Event:** Organizers define new events, specifying dates and ticket capacity.
 - **Cancel Event:** Organizers can cancel their own scheduled events.
 

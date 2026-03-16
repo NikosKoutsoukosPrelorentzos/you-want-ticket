@@ -16,7 +16,6 @@ class EventBase(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     status: Optional[EventStatus] = EventStatus.SCHEDULED
-    location: Optional[str] = None
     available_number_of_tickets: Optional[int] = None
     place_uuid: Optional[UUID] = None
 
@@ -27,7 +26,6 @@ class EventCreate(EventBase):
     title: str
     start_date: datetime
     end_date: datetime
-    location: str
     available_number_of_tickets: int
     place_uuid: UUID
 

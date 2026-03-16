@@ -80,9 +80,7 @@ class EventService:
         db_events = self.event_repository.get_events_by_start_date(start_date)
         return [EventDTO.model_validate(event) for event in db_events]
 
-    def get_events_by_location(self, location: str) -> list[EventDTO]:
-        db_events = self.event_repository.get_events_by_location(location)
-        return [EventDTO.model_validate(event) for event in db_events]
+
 
     def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int):
         result = self.event_repository.remove_available_tickets(event_uuid, number_of_tickets)
@@ -100,14 +98,12 @@ class EventService:
             self,
             start_date: Optional[datetime] = None,
             end_date: Optional[datetime] = None,
-            event_type: Optional[EventType] = None,
-            location: Optional[str] = None
+            event_type: Optional[EventType] = None
     ) -> List[EventDTO]:
         db_events = self.event_repository.get_all_events(
             start_date=start_date,
             end_date=end_date,
-            event_type=event_type,
-            location=location
+            event_type=event_type
         )
         return [EventDTO.model_validate(event) for event in db_events]
 

@@ -40,18 +40,16 @@ def get_all_events(
         start_date: Optional[datetime] = Query(None, description="Filter by start date (>=)"),
         end_date: Optional[datetime] = Query(None, description="Filter by end date (<=)"),
         event_type: Optional[EventType] = Query(None, description="Filter by event type"),
-        location: Optional[str] = Query(None, description="Filter by location (partial match)"),
         event_service: EventService = Depends(deps.get_event_service),
         current_user: UserDTO = Depends(deps.get_current_active_user)
 ) -> list[EventDTO]:
     try:
         logger.info(
-            f"Getting all events for user: {current_user.email} with filters: start={start_date}, end={end_date}, type={event_type}, loc={location}")
+            f"Getting all events for user: {current_user.email} with filters: start={start_date}, end={end_date}, type={event_type}")
         return event_service.get_all_events(
             start_date=start_date,
             end_date=end_date,
-            event_type=event_type,
-            location=location
+            event_type=event_type
         )
     except HTTPException as e:
         logger.error(e)
