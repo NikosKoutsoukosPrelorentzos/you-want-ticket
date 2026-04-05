@@ -21,7 +21,7 @@ def scan_ticket(
 ):
     try:
         logger.info(f"Scanning ticket: {ticket_uuid} by organizer: {current_user.email}")
-        ticket_service.scan_ticket(ticket_uuid)
+        ticket_service.scan_ticket(ticket_uuid, current_user.uuid)
         return {"message": "Ticket scanned successfully"}
     except HTTPException as e:
         logger.error(e)

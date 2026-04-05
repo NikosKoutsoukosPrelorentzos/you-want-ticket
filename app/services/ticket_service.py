@@ -103,7 +103,7 @@ class TicketService:
         ticket: Optional[Ticket] = self.ticket_repository.get_ticket_by_uuid(ticket_uuid)
         if ticket is None:
             raise HTTPException(status_code=404, detail="Ticket not found")
-        url_to_bind: str = f"http://localhost:8000/{ticket_uuid}/scan"
+        url_to_bind: str = f"http://localhost:8000/api/v1/tickets/{ticket_uuid}/scan"
         qr = qrcode.QRCode(  # type: ignore
             version=1,
             box_size=10,
