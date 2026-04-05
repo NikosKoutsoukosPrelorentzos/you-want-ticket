@@ -41,4 +41,5 @@ class TicketRepository(BaseRepository):
                 .values(status=TicketStatus.SCANNED)
                 )
         result = self.db.execute(stmt)
+        self.db.commit()
         return result.rowcount

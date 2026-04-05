@@ -85,7 +85,7 @@ class TicketService:
         if not db_event:
             logger.warning(f"Event not found: {db_ticket.event_uuid}")
             raise HTTPException(status_code=404, detail="Event not found")
-        if db_ticket.owner_uuid != user_uuid:
+        if db_event.owner_uuid != user_uuid:
             logger.warning(f"User {user_uuid} is not the owner of ticket {ticket_uuid}")
             raise HTTPException(status_code=403, detail="Not authorized to scan this ticket")
 
