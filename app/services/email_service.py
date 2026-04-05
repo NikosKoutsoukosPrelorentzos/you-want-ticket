@@ -1,5 +1,9 @@
+import base64
+import io
+
 import resend
 from pydantic import EmailStr
+from starlette.responses import StreamingResponse
 
 from app.core.logger import setup_logger
 from app.dtos.ticket_dto import TicketDTO
@@ -8,9 +12,13 @@ resend.api_key = "re_gsA2vW5q_7xMByJVWybKzPe8oYEPojDGt"
 
 logger = setup_logger(__name__)
 
+import logging
 import resend
 from pydantic import EmailStr
 from typing import List
+
+logger = logging.getLogger(__name__)
+
 
 class EmailService:
     @staticmethod

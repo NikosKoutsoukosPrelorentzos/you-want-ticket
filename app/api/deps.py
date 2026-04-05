@@ -99,9 +99,10 @@ def get_ticket_repository(
 
 def get_ticket_service(
         ticket_repository: TicketRepository = Depends(get_ticket_repository),
-        event_repository: EventRepository = Depends(get_event_repository)
+        event_repository: EventRepository = Depends(get_event_repository),
+        order_repository: OrderRepository = Depends(get_order_repository)
 ) -> TicketService:
-    return TicketService(ticket_repository, event_repository)
+    return TicketService(ticket_repository, event_repository,order_repository)
 
 
 def get_order_service(

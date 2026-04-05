@@ -48,3 +48,19 @@ def get_ticket_qr_code(
     except Exception as e:
         logger.error(f"Error generating QR code for ticket: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.get("/all/{order_uuid}", status_code=200)
+def get_tickets_by_order(
+        order_uuid: str,
+        current_user: UserDTO = Depends(deps.get_current_active_user),
+        ticket_service=Depends(get_ticket_service)
+):
+    try:
+        logger.info(f"Fetching tickets for order: {order_uuid} by user: {current_user.email}")
+        return ticket_service.get_tickets_by_order_uuid(order_uuid, current_user.uuid)
+    except HTTPException as e:
+        logger.error(e)
+        raise e
+    except Exception as e:
+        logger.error(f"Error fetching tickets for order: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

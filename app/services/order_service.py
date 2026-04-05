@@ -9,6 +9,7 @@ from app.dtos.order_dto import OrderCreate, OrderDTO
 from app.dtos.ticket_dto import TicketCreate, TicketDTO
 from app.dtos.user_dto import UserDTO
 from app.enums.ticket_status import TicketStatus
+from app.models.order import Order
 from app.repositories.order_repository import OrderRepository
 from app.services.email_service import EmailService
 from app.services.event_service import EventService
@@ -85,15 +86,11 @@ class OrderService:
             raise e
 
     def cancel_order_by_user(self, order_uuid: UUID, user_uuid: UUID) -> int:
-        db_order = self.order_repository.get_order_by_uuid(order_uuid)
-        if not db_order:
-            raise HTTPException(status_code=404, detail=f"Order not found: {order_uuid}")
-        if db_order.owner_uuid != user_uuid:
-            raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+        db_order =self.get_and_validate_order_ownership(order_uuid, user_uuid)
         if db_order.status != OrderStatus.IN_PROGRESS:
             raise HTTPException(status_code=409, detail=f"Order is not in progress: {order_uuid}")
         try:
-            tickets = self.ticket_service.get_tickets_by_order_uuid(order_uuid)
+            tickets = self.ticket_service.get_tickets_by_order_uuid(order_uuid, user_uuid)
             for ticket in tickets:
                 self.ticket_service.cancel_ticket(ticket.uuid, user_uuid)
             result: int = self.order_repository.cancel_order_by_user(order_uuid, user_uuid)
@@ -107,6 +104,14 @@ class OrderService:
             self.order_repository.rollback()
             logger.info(f"Rolling back transaction for order: {order_uuid}")
             raise e
+
+    def get_and_validate_order_ownership(self, order_uuid: UUID, user_uuid: UUID) -> Order:
+        db_order = self.order_repository.get_order_by_uuid(order_uuid)
+        if not db_order:
+            raise HTTPException(status_code=404, detail=f"Order not found: {order_uuid}")
+        if db_order.owner_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Not authorized to access this order")
+        return db_order
 
     def get_all_user_orders(
             self,

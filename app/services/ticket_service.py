@@ -10,15 +10,17 @@ from app.dtos.ticket_dto import TicketCreate, TicketDTO
 from app.enums.ticket_status import TicketStatus
 from app.models.ticket import Ticket
 from app.repositories.event_repository import EventRepository
+from app.repositories.order_repository import OrderRepository
 from app.repositories.ticket_repository import TicketRepository
 
 logger = setup_logger(__name__)
 
 
 class TicketService:
-    def __init__(self, ticket_repository: TicketRepository, event_repository: EventRepository):
+    def __init__(self, ticket_repository: TicketRepository, event_repository: EventRepository, order_repository: OrderRepository):
         self.event_repository = event_repository
         self.ticket_repository = ticket_repository
+        self.order_repository = order_repository
 
     def create_tickets(self, ticket_create_requests: List[TicketCreate]) -> List[TicketDTO]:
         if not ticket_create_requests:
@@ -48,7 +50,12 @@ class TicketService:
             raise HTTPException(status_code=404, detail="Ticket not found")
         return TicketDTO.model_validate(db_ticket)
 
-    def get_tickets_by_order_uuid(self, order_uuid: UUID) -> List[TicketDTO]:
+    def get_tickets_by_order_uuid(self, order_uuid: UUID, user_uuid: UUID) -> List[TicketDTO]:
+        db_order = self.order_repository.get_order_by_uuid(order_uuid)
+        if not db_order:
+            raise HTTPException(status_code=404, detail=f"Order not found: {order_uuid}")
+        if db_order.owner_uuid != user_uuid:
+            raise HTTPException(status_code=403, detail="Not authorized to access this order")
         logger.info(f"Fetching tickets for order UUID: {order_uuid}")
         db_tickets = self.ticket_repository.get_tickets_by_order_uuid(order_uuid)
         return [TicketDTO.model_validate(ticket) for ticket in db_tickets]
@@ -110,9 +117,3 @@ class TicketService:
         img_buffer.seek(0)
         b64 = base64.b64encode(img_buffer.read()).decode("utf-8")
         return b64
-
-    def check_if_user_is_member(self, user_id: int, album_id: int) -> bool:
-        album_membership = self.album_membership_repo.get_album_membership_by_user_id_and_album_id(user_id, album_id)
-        if not album_membership:
-            return False
-        return True
