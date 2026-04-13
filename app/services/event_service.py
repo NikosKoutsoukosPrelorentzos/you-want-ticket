@@ -31,6 +31,8 @@ class EventService:
             raise HTTPException(status_code=404, detail="Place not found")
         if db_place.owner_uuid != user_uuid:
             raise HTTPException(status_code=403, detail="Not authorized to create events for this place")
+        if self.is_overlapping_place_and_time(event_create_request.place_uuid, event_create_request.start_date, event_create_request.end_date):
+            raise HTTPException(status_code=409, detail="Place is already booked for the given time range")
         self._validations(event_create_request, db_place)
         db_event = self.event_repository.create_event(event_create_request, user_uuid)
         return EventDTO.model_validate(db_event)
@@ -135,3 +137,7 @@ class EventService:
         logger.info(f"Updated {result} events to ACTIVE status based on start time")
         result = self.event_repository.update_event_statuses_by_time_to_finished()
         logger.info(f"Updated {result} events to FINISHED status based on end time")
+
+    def is_overlapping_place_and_time(self, place_uuid: UUID, start_date: datetime, end_date: datetime) -> bool:
+        overlapping_events = self.event_repository.get_overlapping_events(place_uuid, start_date, end_date)
+        return overlapping_events is not None

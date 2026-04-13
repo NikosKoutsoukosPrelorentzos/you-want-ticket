@@ -34,8 +34,6 @@ class EventRepository(BaseRepository):
     def get_events_by_start_date(self, start_date: datetime) -> list[type[Event]]:
         return self.db.query(Event).filter(Event.start_date == start_date).all()
 
-
-
     def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int) -> int:
         stmt = (
             update(Event)
@@ -130,3 +128,10 @@ class EventRepository(BaseRepository):
         self.db.commit()
         return result_finished.rowcount
 
+
+    def get_overlapping_events(self, place_uuid: UUID, start_date: datetime, end_date: datetime) -> Optional[Event]:
+        return self.db.query(Event).filter(
+            Event.place_uuid == place_uuid,
+            Event.start_date < end_date,
+            Event.end_date > start_date
+        ).first()
