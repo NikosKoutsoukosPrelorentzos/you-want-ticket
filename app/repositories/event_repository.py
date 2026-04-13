@@ -104,7 +104,7 @@ class EventRepository(BaseRepository):
         return self.db.query(Event).filter(Event.place_uuid == place_uuid).all()
 
     def update_event_statuses_by_time_to_active(self) -> int:
-        now = datetime.now()
+        now = datetime.utcnow()
         stmt_active = (
             update(Event)
             .where(Event.status == EventStatus.SCHEDULED)
@@ -118,10 +118,10 @@ class EventRepository(BaseRepository):
         return result_active.rowcount
 
     def update_event_statuses_by_time_to_finished(self) -> int:
-        now = datetime.now()
+        now = datetime.utcnow()
         stmt_finished = (
             update(Event)
-            .where(Event.status == EventStatus.ACTIVE)
+            .where(Event.status.in_([EventStatus.SCHEDULED, EventStatus.ACTIVE]))
             .where(Event.end_date <= now)
             .values(status=EventStatus.FINISHED)
             .execution_options(synchronize_session="fetch")
