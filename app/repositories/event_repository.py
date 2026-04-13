@@ -75,30 +75,6 @@ class EventRepository(BaseRepository):
 
         return query.all()
 
-    def start_event(self, event_uuid) -> int:
-        stmt = (
-            update(Event)
-            .where(Event.uuid == event_uuid)
-            .where(Event.status == EventStatus.SCHEDULED)
-            .values(status=EventStatus.ACTIVE)
-            .execution_options(synchronize_session="fetch")
-        )
-        result = self.db.execute(stmt)
-        self.db.commit()
-        return result.rowcount
-
-    def end_event(self, event_uuid) -> int:
-        stmt = (
-            update(Event)
-            .where(Event.uuid == event_uuid)
-            .where(Event.status == EventStatus.ACTIVE)
-            .values(status=EventStatus.FINISHED)
-            .execution_options(synchronize_session="fetch")
-        )
-        result = self.db.execute(stmt)
-        self.db.commit()
-        return result.rowcount
-
     def cancel_event(self, event_uuid) -> int:
         stmt = (
             update(Event)
@@ -126,3 +102,31 @@ class EventRepository(BaseRepository):
 
     def get_events_by_place_uuid(self, place_uuid):
         return self.db.query(Event).filter(Event.place_uuid == place_uuid).all()
+
+    def update_event_statuses_by_time_to_active(self) -> int:
+        now = datetime.now()
+        stmt_active = (
+            update(Event)
+            .where(Event.status == EventStatus.SCHEDULED)
+            .where(Event.start_date <= now)
+            .where(Event.end_date >= now)
+            .values(status=EventStatus.ACTIVE)
+            .execution_options(synchronize_session="fetch")
+        )
+        result_active = self.db.execute(stmt_active)
+        self.db.commit()
+        return result_active.rowcount
+
+    def update_event_statuses_by_time_to_finished(self) -> int:
+        now = datetime.now()
+        stmt_finished = (
+            update(Event)
+            .where(Event.status == EventStatus.ACTIVE)
+            .where(Event.end_date <= now)
+            .values(status=EventStatus.FINISHED)
+            .execution_options(synchronize_session="fetch")
+        )
+        result_finished = self.db.execute(stmt_finished)
+        self.db.commit()
+        return result_finished.rowcount
+

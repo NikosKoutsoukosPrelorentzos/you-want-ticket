@@ -17,12 +17,12 @@ def get_scheduler():
 
 def start_scheduler():
     """
-    Starts the background scheduler and adds the cleanup job.
+    Starts the background scheduler and adds the cleanup jobs.
     """
     if not scheduler.running:
         # Run every 1 minute
         trigger = IntervalTrigger(minutes=1)
-
+        # Order cleanup job that runs every minute
         scheduler.add_job(
             __run_order_cleanup_job,
             trigger=trigger,
@@ -30,9 +30,16 @@ def start_scheduler():
             name="Cleanup expired orders",
             replace_existing=True
         )
-
+        # Event status update job that runs every minute
+        scheduler.add_job(
+            __run_event_status_update_job,
+            trigger=trigger,
+            id="event_status_update",
+            name="Update event statuses",
+            replace_existing=True
+        )
         scheduler.start()
-        logger.info("Scheduler started with order cleanup job (interval: 1 min).")
+        logger.info("Scheduler started with order cleanup job and event status update (interval: 1 min).")
 
 
 def stop_scheduler():
@@ -71,3 +78,20 @@ def __run_order_cleanup_job():
     finally:
         db.close()
         logger.info("Finished scheduled order cleanup job.")
+
+
+def __run_event_status_update_job():
+    from app.api.deps import get_db, get_event_service, get_event_repository
+
+    logger.info("Starting scheduled event status update job...")
+    db_gen = get_db()
+    db = next(db_gen)
+    try:
+        event_repository = get_event_repository(db)
+        event_service = get_event_service(event_repository)
+        event_service.update_events_status_with_scheduler()
+    except Exception as e:
+        logger.error(f"Error during event status update job: {str(e)}")
+    finally:
+        db.close()
+        logger.info("Finished scheduled event status update job.")

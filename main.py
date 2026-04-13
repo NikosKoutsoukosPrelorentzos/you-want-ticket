@@ -9,15 +9,12 @@ from app.core.scheduler import start_scheduler, stop_scheduler
 from app.db.base_class import Base
 from app.db.session import engine
 
-# Create tables
 Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start the scheduler
     start_scheduler()
     yield
-    # Shutdown: Stop the scheduler
     stop_scheduler()
 
 app = FastAPI(
@@ -31,7 +28,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (only for development!)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

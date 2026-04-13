@@ -80,8 +80,6 @@ class EventService:
         db_events = self.event_repository.get_events_by_start_date(start_date)
         return [EventDTO.model_validate(event) for event in db_events]
 
-
-
     def remove_available_tickets(self, event_uuid: UUID, number_of_tickets: int):
         result = self.event_repository.remove_available_tickets(event_uuid, number_of_tickets)
         if result == 0:
@@ -131,3 +129,9 @@ class EventService:
     def get_events_by_place_uuid(self, place_uuid: UUID) -> List[EventDTO]:
         db_events = self.event_repository.get_events_by_place_uuid(place_uuid)
         return [EventDTO.model_validate(event) for event in db_events]
+
+    def update_events_status_with_scheduler(self):
+        result = self.event_repository.update_event_statuses_by_time_to_active()
+        logger.info(f"Updated {result} events to ACTIVE status based on start time")
+        result = self.event_repository.update_event_statuses_by_time_to_finished()
+        logger.info(f"Updated {result} events to FINISHED status based on end time")
