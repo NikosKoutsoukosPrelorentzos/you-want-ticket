@@ -1,0 +1,1070 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{iftex}
+\ifPDFTeX
+\usepackage[utf8]{inputenc}
+\usepackage[LGR,T1]{fontenc}
+\usepackage{lmodern}
+\else
+% XeLaTeX and LuaLaTeX handle UTF-8 input natively.
+\usepackage{fontspec}
+\setmainfont{FreeSerif}
+\fi
+\usepackage[greek,english]{babel}
+\usepackage{textalpha}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage[unicode]{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{geometry}
+\usepackage{setspace}
+
+\geometry{margin=1in}
+\setlength{\headheight}{14.5pt}
+\setstretch{1.5}
+\emergencystretch=2em
+\sloppy
+
+% Ρυθμίσεις για κώδικα
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numberstyle=\tiny,
+    numbers=left,
+    stepnumber=1,
+    captionpos=b
+}
+
+\selectlanguage{greek}
+
+\title{
+    \textbf{Σύστημα Κράτησης Εισιτηρίων Εκδηλώσεων}\\
+    \large ``You Want Ticket''\\
+    \vspace{1cm}
+    \normalsize Τεκμηρίωση Πανεπιστημιακού Έργου
+}
+
+\author{Πανεπιστήμιο}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{You Want Ticket}
+\lhead{Τεκμηρίωση Έργου}
+\cfoot{\thepage}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\maketitle
+\hypersetup{pageanchor=true}
+
+\tableofcontents
+\newpage
+
+% ================================
+% Κεφάλαιο 1: Εισαγωγή
+% ================================
+\chapter{Εισαγωγή}
+
+\section{Περιγραφή του Έργου}
+
+Το έργο ``You Want Ticket'' είναι μια σύγχρονη διαδικτυακή εφαρμογή για την κράτηση εισιτηρίων εκδηλώσεων. Η εφαρμογή παρέχει μια πλήρη λύση διαχείρισης εκδηλώσεων, επιτρέποντας στους χρήστες να δημιουργούν, διαχειρίζονται και κάνουν κρατήσεις για διάφορα είδη εκδηλώσεων, από συναυλίες έως σεμινάρια και αθλητικά γεγονότα.
+
+\section{Σκοπός και Στόχοι}
+
+Ο κύριος σκοπός της εφαρμογής είναι να:
+\begin{itemize}
+    \item Παρέχει ένα εύχρηστο σύστημα κράτησης εισιτηρίων για τελικούς χρήστες
+    \item Επιτρέπει στους ιδιοκτήτες χώρων να διαχειρίζονται τις εκδηλώσεις τους
+    \item Διαχειρίζεται αποτελεσματικά τις κρατήσεις και τα εισιτήρια
+    \item Αυτοματοποιεί τη διαδικασία κράτησης και επιβεβαίωσης
+    \item Παρέχει ασφάλεια και αξιοπιστία στις συναλλαγές
+\end{itemize}
+
+\section{Τεχνολογίες που Χρησιμοποιούνται}
+
+Η εφαρμογή αναπτύχθηκε χρησιμοποιώντας τις ακόλουθες τεχνολογίες:
+
+\begin{itemize}
+    \item \textbf{Backend Framework:} FastAPI - ένα σύγχρονο Python web framework για δημιουργία RESTful APIs
+    \item \textbf{Database:} PostgreSQL - ένα ισχυρό σχεσιακό σύστημα διαχείρισης βάσεων δεδομένων
+    \item \textbf{ORM:} SQLAlchemy - ένα αντικειμενοστραφές σύστημα χαρτογράφησης για τη βάση δεδομένων
+    \item \textbf{Ταυτοποίηση:} JWT (JSON Web Tokens) με κρυπτογραφία OAuth2
+    \item \textbf{Κρυπτογραφία:} bcrypt για ασφαλή αποθήκευση κωδικών πρόσβασης
+    \item \textbf{Έλεγχος Καθυστέρησης:} APScheduler - για αυτοματοποιημένες εργασίες
+    \item \textbf{Email:} Resend - υπηρεσία αποστολής email
+    \item \textbf{QR Codes:} qrcode - για δημιουργία κωδικών QR των εισιτηρίων
+\end{itemize}
+
+\newpage
+
+% ================================
+% Κεφάλαιο 2: Σχεδιασμός Συστήματος
+% ================================
+\chapter{Σχεδιασμός Συστήματος}
+
+\section{Αρχιτεκτονική}
+
+Η εφαρμογή ακολουθεί το μοτίβο αρχιτεκτονικής \textbf{MVC (Model-View-Controller)}. Αυτή η αρχιτεκτονική διαχωρίζει τις ευθύνες και διευκολύνει τη συντήρηση, τη δοκιμή και την επέκταση της εφαρμογής.
+
+\subsection{Δομή MVC}
+
+\subsubsection{Model (Μοντέλο) - Δεδομένα}
+
+Τα Models αντιπροσωπεύουν τη δομή των δεδομένων και τη λογική τους. Υλοποιούνται χρησιμοποιώντας SQLAlchemy ORM:
+
+\begin{itemize}
+    \item \textbf{User Model}: Αντιπροσωπεύει έναν χρήστη του συστήματος
+    \item \textbf{Event Model}: Αντιπροσωπεύει μια εκδήλωση
+    \item \textbf{Order Model}: Αντιπροσωπεύει μια παραγγελία/κράτηση
+    \item \textbf{Ticket Model}: Αντιπροσωπεύει ένα εισιτήριο
+    \item \textbf{Place Model}: Αντιπροσωπεύει έναν χώρο εκδήλωσης
+\end{itemize}
+
+Κάθε Model περιέχει:
+\begin{itemize}
+    \item Ιδιότητες (attributes) που ορίζουν τα δεδομένα
+    \item Σχέσεις (relationships) με άλλα Models
+    \item Validations για την ακεραιότητα δεδομένων
+\end{itemize}
+
+\subsubsection{View (Προβολή) - API Endpoints}
+
+Τα Views υλοποιούνται ως FastAPI endpoints (\texttt{app/api/v1/endpoints/}):
+
+\begin{itemize}
+    \item \textbf{login.py}: Endpoints για ταυτοποίηση χρηστών
+    \item \textbf{users.py}: Endpoints για διαχείριση χρηστών
+    \item \textbf{events.py}: Endpoints για διαχείριση εκδηλώσεων
+    \item \textbf{orders.py}: Endpoints για διαχείριση κρατήσεων
+    \item \textbf{tickets.py}: Endpoints για διαχείριση εισιτηρίων
+    \item \textbf{places.py}: Endpoints για διαχείριση χώρων
+\end{itemize}
+
+Κάθε endpoint:
+\begin{itemize}
+    \item Λαμβάνει αιτήματα HTTP από τους clients
+    \item Επικυρώνει τα δεδομένα εισόδου (χρησιμοποιώντας DTOs)
+    \item Ελέγχει τα δικαιώματα του χρήστη
+    \item Επιστρέφει απαντήσεις JSON
+\end{itemize}
+
+\subsubsection{Controller (Ελεγκτής) - Business Logic}
+
+Η λογική της εφαρμογής υλοποιείται ως Services (\texttt{app/services/}):
+
+\begin{itemize}
+    \item \textbf{AuthService}: Διαχειρίζει την ταυτοποίηση χρηστών (κανονική και Google OAuth2)
+    \item \textbf{UserService}: Διαχειρίζει τις λειτουργίες χρηστών
+    \item \textbf{EventService}: Διαχειρίζει τις λειτουργίες εκδηλώσεων και ενημερώσεων κατάστασης
+    \item \textbf{OrderService}: Διαχειρίζει τις κρατήσεις και τη διαθεσιμότητα εισιτηρίων
+    \item \textbf{TicketService}: Διαχειρίζει τα εισιτήρια και τη δημιουργία QR codes
+    \item \textbf{PlaceService}: Διαχειρίζει τους χώρους εκδηλώσεων
+    \item \textbf{OrderCleanupService}: Διαχειρίζει την αυτοματοποιημένη ακύρωση παραγγελιών
+    \item \textbf{EmailService}: Διαχειρίζει την αποστολή emails
+\end{itemize}
+
+Κάθε Service:
+\begin{itemize}
+    \item Περιέχει τη βύσμα λογική της εφαρμογής
+    \item Συντονίζει λειτουργίες μεταξύ Models
+    \item Εφαρμόζει επιχειρησιακούς κανόνες
+    \item Χρησιμοποιεί Repositories για πρόσβαση δεδομένων
+\end{itemize}
+
+\subsubsection{Data Access Layer (Επίπεδο Πρόσβασης Δεδομένων)}
+
+Για την ενσυλάκωση της λογικής πρόσβασης στα δεδομένα, χρησιμοποιούμε το pattern \textbf{Repository} (\texttt{app/repositories/}):
+
+\begin{itemize}
+    \item \textbf{BaseRepository}: Παρέχει κοινές λειτουργίες (create, read, update, delete)
+    \item \textbf{UserRepository}: Διαχειρίζει πρόσβαση σε δεδομένα χρηστών
+    \item \textbf{EventRepository}: Διαχειρίζει πρόσβαση σε δεδομένα εκδηλώσεων
+    \item \textbf{OrderRepository}: Διαχειρίζει πρόσβαση σε δεδομένα παραγγελιών
+    \item \textbf{TicketRepository}: Διαχειρίζει πρόσβαση σε δεδομένα εισιτηρίων
+    \item \textbf{PlaceRepository}: Διαχειρίζει πρόσβαση σε δεδομένα χώρων
+\end{itemize}
+
+Κάθε Repository:
+\begin{itemize}
+    \item Απομονώνει τις λεπτομέρειες της βάσης δεδομένων
+    \item Παρέχει μια καθαρή διεπαφή για πρόσβαση δεδομένων
+    \item Διευκολύνει τη δοκιμή χρησιμοποιώντας mock repositories
+\end{itemize}
+
+\subsection{Ροή Αιτήματος}
+
+Η ροή ενός τυπικού αιτήματος HTTP ακολουθεί το παρακάτω μοτίβο MVC:
+
+\begin{enumerate}
+    \item \textbf{Client Request}: Ο client στέλνει ένα HTTP request σε ένα endpoint
+
+    \item \textbf{View (Endpoint)}: Το endpoint:
+    \begin{itemize}
+        \item Λαμβάνει το request
+        \item Επικυρώνει τα δεδομένα χρησιμοποιώντας DTO validation
+        \item Ελέγχει τα δικαιώματα (role-based access control)
+    \end{itemize}
+
+    \item \textbf{Controller (Service)}: Το Service:
+    \begin{itemize}
+        \item Υλοποιεί τη βύσμα λογική
+        \item Συντονίζει λειτουργίες μεταξύ Repositories
+        \item Εφαρμόζει επιχειρησιακούς κανόνες και validations
+    \end{itemize}
+
+    \item \textbf{Model + Data Access}: Τα Repositories:
+    \begin{itemize}
+        \item Εκτελούν λειτουργίες βάσης δεδομένων
+        \item Επιστρέφουν Model instances
+    \end{itemize}
+
+    \item \textbf{Response}: Το Service επιστρέφει δεδομένα:
+    \begin{itemize}
+        \item Τα δεδομένα μετατρέπονται σε DTO (Data Transfer Object)
+        \item Η View επιστρέφει JSON response
+    \end{itemize}
+
+    \item \textbf{Client Response}: Ο client λαμβάνει τα δεδομένα
+\end{enumerate}
+
+\subsection{Πλεονεκτήματα της MVC Αρχιτεκτονικής}
+
+\begin{itemize}
+    \item \textbf{Διαχωρισμός Ευθυνών}: Κάθε στρώμα έχει ξεκάθαρες ευθύνες
+    \item \textbf{Ευκολία Δοκιμής}: Κάθε στρώμα μπορεί να δοκιμαστεί ανεξάρτητα
+    \item \textbf{Επεκτασιμότητα}: Νέα features μπορούν να προστεθούν χωρίς αλλαγή άλλων στρωμάτων
+    \item \textbf{Συντήρηση}: Ο κώδικας είναι ευκολότερος να διαβάσει και να αναπτυχθεί
+    \item \textbf{Επαναχρησιμοποίηση}: Τα Services μπορούν να χρησιμοποιηθούν από πολλά endpoints
+\end{itemize}
+
+\section{Δομή Βάσης Δεδομένων}
+
+Η εφαρμογή χρησιμοποιεί τις ακόλουθες κύριες πίνακες:
+
+\subsection{Πίνακας User (Χρήστης)}
+Αποθηκεύει τις πληροφορίες των χρηστών:
+\begin{itemize}
+    \item \texttt{id}: Αριθμητικό αναγνωριστικό
+    \item \texttt{uuid}: Μοναδικό αναγνωριστικό
+    \item \texttt{email}: Email χρήστη
+    \item \texttt{hashed\_password}: Κρυπτογραφημένος κωδικός πρόσβασης
+    \item \texttt{is\_active}: Κατάσταση χρήστη
+    \item \texttt{user\_role}: Ρόλος χρήστη (CUSTOMER ή EVENT\_ORGANIZER)
+\end{itemize}
+
+\subsection{Πίνακας Event (Εκδήλωση)}
+Αποθηκεύει τις πληροφορίες των εκδηλώσεων:
+\begin{itemize}
+    \item \texttt{uuid}: Μοναδικό αναγνωριστικό
+    \item \texttt{type}: Τύπος εκδήλωσης
+    \item \texttt{title}: Τίτλος εκδήλωσης
+    \item \texttt{description}: Περιγραφή
+    \item \texttt{owner\_uuid}: UUID του ιδιοκτήτη
+    \item \texttt{place\_uuid}: UUID του χώρου
+    \item \texttt{start\_date}: Ημερομηνία έναρξης
+    \item \texttt{end\_date}: Ημερομηνία λήξης
+    \item \texttt{status}: Κατάσταση (SCHEDULED, ONGOING, CANCELLED)
+    \item \texttt{available\_number\_of\_tickets}: Διαθέσιμα εισιτήρια
+\end{itemize}
+
+\subsection{Πίνακας Order (Παραγγελία)}
+Αποθηκεύει τις πληροφορίες των κρατήσεων:
+\begin{itemize}
+    \item \texttt{uuid}: Μοναδικό αναγνωριστικό
+    \item \texttt{owner\_uuid}: UUID του χρήστη που έκανε την κράτηση
+    \item \texttt{event\_uuid}: UUID της εκδήλωσης
+    \item \texttt{number\_of\_tickets}: Αριθμός εισιτηρίων
+    \item \texttt{status}: Κατάσταση παραγγελίας με τιμές \texttt{IN\_PROGRESS}, \texttt{CONFIRMED} ή \texttt{CANCELLED}
+\end{itemize}
+
+\subsection{Πίνακας Ticket (Εισιτήριο)}
+Αποθηκεύει τις πληροφορίες των εισιτηρίων:
+\begin{itemize}
+    \item \texttt{uuid}: Μοναδικό αναγνωριστικό
+    \item \texttt{order\_uuid}: UUID της παραγγελίας
+    \item \texttt{event\_uuid}: UUID της εκδήλωσης
+    \item \texttt{status}: Κατάσταση εισιτηρίου
+    \item \texttt{qr\_code}: Κώδικας QR του εισιτηρίου
+\end{itemize}
+
+\subsection{Πίνακας Place (Χώρος)}
+Αποθηκεύει τις πληροφορίες των χώρων εκδηλώσεων:
+\begin{itemize}
+    \item \texttt{uuid}: Μοναδικό αναγνωριστικό
+    \item \texttt{name}: Όνομα χώρου
+    \item \texttt{address}: Διεύθυνση
+    \item \texttt{owner\_uuid}: UUID του ιδιοκτήτη
+    \item \texttt{capacity}: Χωρητικότητα
+\end{itemize}
+
+\section{Ρόλοι και Δικαιώματα}
+
+Η εφαρμογή υποστηρίζει δύο κύριους ρόλους:
+
+\begin{enumerate}
+    \item \textbf{CUSTOMER (Πελάτης):}
+    \begin{itemize}
+        \item Μπορεί να κάνει κρατήσεις για εκδηλώσεις
+        \item Μπορεί να δει τα εισιτήρια του
+        \item Μπορεί να ακυρώσει κρατήσεις
+    \end{itemize}
+
+    \item \textbf{EVENT\_ORGANIZER (Διοργανωτής Εκδηλώσεων):}
+    \begin{itemize}
+        \item Μπορεί να δημιουργήσει και να διαχειριστεί εκδηλώσεις
+        \item Μπορεί να δημιουργήσει και να διαχειριστεί χώρους
+        \item Μπορεί να δει τις κρατήσεις για τις εκδηλώσεις του
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+% ================================
+% Κεφάλαιο 3: Υλοποίηση
+% ================================
+\chapter{Υλοποίηση}
+
+\section{Δομή Του Έργου}
+
+Το έργο είναι οργανωμένο ως εξής:
+
+\begin{lstlisting}[language=bash, caption=Δομή Φακέλου Έργου]
+you-want-ticket/
+|-- app/
+|   |-- api/
+|   |   |-- v1/
+|   |   |   |-- endpoints/
+|   |   |   `-- api.py
+|   |   `-- deps.py
+|   |-- core/
+|   |   |-- config.py
+|   |   |-- security.py
+|   |   |-- logger.py
+|   |   |-- role_checker.py
+|   |   `-- scheduler.py
+|   |-- db/
+|   |   |-- base_class.py
+|   |   `-- session.py
+|   |-- models/
+|   |-- repositories/
+|   |-- services/
+|   |-- dtos/
+|   |-- enums/
+|   `-- tests/
+|-- main.py
+|-- requirements.txt
+`-- docker/
+\end{lstlisting}
+
+\section{Κύριες Δυνατότητες}
+
+\subsection{Ταυτοποίηση και Εξουσιοδότηση}
+
+Η εφαρμογή χρησιμοποιεί JWT tokens για ταυτοποίηση. Κάθε χρήστης λαμβάνει ένα token κατά τη σύνδεση που χρησιμοποιείται για επιβεβαίωση ταυτότητας σε επόμενες αιτήσεις.
+
+\begin{lstlisting}[caption=Παράδειγμα Login Endpoint]
+@router.post("/login", response_model=TokenDTO)
+def login(form_data: OAuth2PasswordRequestForm,
+          auth_service: AuthService = Depends()):
+    return auth_service.login(
+        email=form_data.username,
+        password=form_data.password
+    )
+\end{lstlisting}
+
+\subsection{Διαχείριση Εκδηλώσεων}
+
+Ο διοργανωτής εκδηλώσεων μπορεί να:
+\begin{itemize}
+    \item Δημιουργήσει νέες εκδηλώσεις
+    \item Ενημερώσει τα στοιχεία εκδηλώσεων
+    \item Ακυρώσει εκδηλώσεις
+    \item Δει λεπτομέρειες κρατήσεων
+\end{itemize}
+
+Το σύστημα ελέγχει για επικαλύψεις χρονοδιαγράμματος και εξασφαλίζει ότι η ίδια τοποθεσία δεν χρησιμοποιείται ταυτόχρονα.
+
+\subsection{Διαχείριση Κρατήσεων}
+
+Η διαδικασία κράτησης:
+\begin{enumerate}
+    \item Ο χρήστης δημιουργεί μια παραγγελία για μια εκδήλωση
+    \item Το σύστημα ελέγχει τη διαθεσιμότητα εισιτηρίων
+    \item Τα εισιτήρια δημιουργούνται και συσχετίζονται με την παραγγελία
+    \item Δημιουργούνται κώδικες QR για κάθε εισιτήριο
+    \item Αποστέλλεται email επιβεβαίωσης στον χρήστη
+    \item Παραγγελία ενημερώνεται σε κατάσταση CONFIRMED
+\end{enumerate}
+
+\subsection{Αυτοματοποιημένες Εργασίες}
+
+Το σύστημα χρησιμοποιεί APScheduler για:
+\begin{itemize}
+    \item Ακύρωση παραγγελιών που παραμένουν σε κατάσταση IN\_PROGRESS για περισσότερο από ένα συγκεκριμένο διάστημα
+    \item Ενημέρωση της κατάστασης εκδηλώσεων όταν ξεκινούν ή τελειώνουν
+    \item Εκκαθάριση παλαιών δεδομένων
+\end{itemize}
+
+\section{Data Transfer Objects (DTOs)}
+
+Τα DTOs χρησιμοποιούνται για την ανταλλαγή δεδομένων μεταξύ του API και του client:
+
+\begin{lstlisting}[caption=Παράδειγμα DTO]
+class EventCreate(BaseModel):
+    title: str
+    description: str
+    type: EventType
+    start_date: datetime
+    end_date: datetime
+    place_uuid: UUID
+    available_number_of_tickets: int
+\end{lstlisting}
+
+\section{Repositories Pattern}
+
+Το έργο χρησιμοποιεί το pattern Repository για ενσυλάκωση της λογικής πρόσβασης στα δεδομένα:
+
+\begin{itemize}
+    \item \textbf{BaseRepository}: Παρέχει κοινές λειτουργίες (create, read, update, delete)
+    \item \textbf{Specialized Repositories}: UserRepository, EventRepository κ.λπ.
+\end{itemize}
+
+\subsection{Παράδειγμα Repository Λειτουργίας}
+
+\begin{lstlisting}[caption=Repository Pattern Example]
+class EventRepository(BaseRepository):
+    def create_event(self, event_create: EventCreate,
+                     user_uuid: UUID) -> Event:
+        db_event = Event(
+            title=event_create.title,
+            description=event_create.description,
+            owner_uuid=user_uuid,
+            ...
+        )
+        self.db.add(db_event)
+        return db_event
+\end{lstlisting}
+
+\section{Σύστημα Προγραμματισμού (Scheduler)}
+
+Το σύστημα χρησιμοποιεί το APScheduler (Advanced Python Scheduler) για την αυτοματοποίηση κρίσιμων εργασιών. Ο scheduler εκτελείται ως ένας background daemon και εκτελεί εργασίες σε κανονικά διαστήματα.
+
+\subsection{Αρχιτεκτονική του Scheduler}
+
+Ο scheduler ξεκινά κατά την εκκίνηση της εφαρμογής και εκτελεί δύο κύρια έργα κάθε ένα λεπτό:
+
+\begin{enumerate}
+    \item \textbf{Order Cleanup Job}: Ακύρωση παραγγελιών που δεν έχουν ολοκληρωθεί
+    \item \textbf{Event Status Update Job}: Ενημέρωση κατάστασης εκδηλώσεων
+\end{enumerate}
+
+\subsection{Ροή Εξαίρεσης Παραγγελιών (Order Cancellation Flow)}
+
+Η διαδικασία ακύρωσης παραγγελιών που έχουν λήξει είναι κρίσιμη για τη διαχείριση της διαθεσιμότητας εισιτηρίων.
+
+\subsubsection{Διαδικασία Εξαίρεσης}
+
+\begin{enumerate}
+    \item \textbf{Υπολογισμός Χρονικού Ορίου}: Ο scheduler υπολογίζει τον χρόνο αποκοπής ως τρέχοντα ώρα μείον 5 λεπτά (\texttt{cutoff\_time = datetime.utcnow() - timedelta(minutes=5)})
+    
+    \item \textbf{Εύρεση Λήξαντων Παραγγελιών}: Ανακτώνται όλες οι παραγγελίες που:
+    \begin{itemize}
+        \item Έχουν κατάσταση \texttt{IN\_PROGRESS}
+        \item Ηξάνθησαν πριν από το χρονικό όριο (δηλαδή, δεν ολοκληρώθηκαν εντός 5 λεπτών)
+    \end{itemize}
+    
+    \item \textbf{Ακύρωση Παραγγελίας}: Για κάθε λήξασα παραγγελία:
+    \begin{itemize}
+        \item Η κατάστασή της ενημερώνεται σε \texttt{CANCELLED}
+        \item Τα εισιτήρια που σχετίζονται με την παραγγελία επιστρέφονται στο pool διαθέσιμων εισιτηρίων
+    \end{itemize}
+    
+    \item \textbf{Επαναφορά Εισιτηρίων}: Ο αριθμός των ακυρωθέντων εισιτηρίων προστίθεται ξανά στο πεδίο \texttt{available\_number\_of\_tickets} της εκδήλωσης
+    
+    \item \textbf{Commit και Καταγραφή}: Οι αλλαγές commits στη βάση δεδομένων. Εάν υπάρχει σφάλμα, το σύστημα κάνει rollback τη συναλλαγή
+\end{enumerate}
+
+\begin{lstlisting}[caption=Order Cleanup Logic]
+def cancel_expired_orders(self) -> None:
+    # Compute the cutoff time (5 minutes ago)
+    cutoff_time = datetime.utcnow() - timedelta(minutes=5)
+    
+    # Get all orders with IN_PROGRESS status before cutoff
+    expired_orders = self.order_service.get_expired_orders(cutoff_time)
+    
+    for order in expired_orders:
+        try:
+            # Cancel the order
+            self.order_service.cancel_expired_order(order.uuid)
+            # Restore the available tickets to the event
+            self.event_service.add_available_tickets(
+                order.event_uuid, 
+                order.number_of_tickets
+            )
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to cancel order: {str(e)}")
+\end{lstlisting}
+
+\subsubsection{Παράδειγμα Σεναρίου}
+
+Έστω ότι ένας χρήστης δημιουργεί μια παραγγελία για 3 εισιτήρια στις 12:00 PM:
+\begin{itemize}
+    \item \texttt{Timestamp}: 12:00 PM
+    \item \texttt{Status}: IN\_PROGRESS
+    \item \texttt{Number of Tickets}: 3
+\end{itemize}
+
+Στις 12:06 PM, ο scheduler ελέγχει:
+\begin{itemize}
+    \item \texttt{Cutoff Time}: 12:01 PM (12:06 - 5 λεπτά)
+    \item Η παραγγελία από τις 12:00 είναι πριν από το cutoff time
+    \item Ακυρώνεται και τα 3 εισιτήρια επιστρέφονται στο pool
+\end{itemize}
+
+\subsection{Διαχείριση Διαθέσιμων Εισιτηρίων}
+
+Η διαθεσιμότητα εισιτηρίων διαχειρίζεται μέσω δύο βασικών λειτουργιών:
+
+\subsubsection{Αφαίρεση Εισιτηρίων (Remove Tickets)}
+
+Όταν δημιουργείται μια παραγγελία:
+\begin{lstlisting}[caption=Remove Available Tickets]
+def remove_available_tickets(self, event_uuid: UUID, 
+                            number_of_tickets: int):
+    result = self.event_repository.remove_available_tickets(
+        event_uuid, 
+        number_of_tickets
+    )
+    if result == 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="Not enough tickets available"
+        )
+\end{lstlisting}
+
+\subsubsection{Προσθήκη Εισιτηρίων (Add Tickets)}
+
+Όταν ακυρώνεται μια παραγγελία:
+\begin{lstlisting}[caption=Add Available Tickets]
+def add_available_tickets(self, event_uuid: UUID, 
+                         number_of_tickets: int):
+    self.event_repository.add_available_tickets(
+        event_uuid, 
+        number_of_tickets
+    )
+\end{lstlisting}
+
+\section{Ενημέρωση Κατάστασης Εκδηλώσεων}
+
+Ο scheduler ενημερώνει αυτόματα την κατάσταση των εκδηλώσεων βάσει του τρέχοντος χρόνου:
+
+\subsection{Ενημέρωση σε ACTIVE}
+
+Όταν ο τρέχων χρόνος φτάσει το \texttt{start\_date} της εκδήλωσης:
+\begin{itemize}
+    \item Αλλάζει από \texttt{SCHEDULED} σε \texttt{ACTIVE}
+    \item Επιτρέπει την έκδοση εισιτηρίων για είσοδο
+    \item Καταγράφεται το γεγονός ότι η εκδήλωση ξεκίνησε
+\end{itemize}
+
+\begin{lstlisting}[caption=Update Event to ACTIVE]
+def update_events_status_with_scheduler(self):
+    # Update SCHEDULED events to ACTIVE
+    result = self.event_repository.\
+        update_event_statuses_by_time_to_active()
+    logger.info(f"Updated {result} events to ACTIVE")
+\end{lstlisting}
+
+\subsection{Ενημέρωση σε FINISHED}
+
+Όταν ο τρέχων χρόνος ξεπεράσει το \texttt{end\_date} της εκδήλωσης:
+\begin{itemize}
+    \item Αλλάζει σε \texttt{FINISHED}
+    \item Δεν επιτρέπονται πλέον νέες κρατήσεις
+    \item Τα εισιτήρια που δεν χρησιμοποιήθηκαν γίνονται άκυρα
+\end{itemize}
+
+\begin{lstlisting}[caption=Update Event to FINISHED]
+def update_events_status_with_scheduler(self):
+    # Update ACTIVE events to FINISHED
+    result = self.event_repository.\
+        update_event_statuses_by_time_to_finished()
+    logger.info(f"Updated {result} events to FINISHED")
+\end{lstlisting}
+
+\section{Δημιουργία QR Codes για Εισιτήρια}
+
+Κάθε εισιτήριο περιέχει ένα μοναδικό κώδικα QR για ασφαλή και γρήγορη επιβεβαίωση κατά την είσοδο.
+
+\subsection{Διαδικασία Δημιουργίας QR Code}
+
+\begin{enumerate}
+    \item \textbf{Ανάκτηση Εισιτηρίου}: Λαμβάνεται το εισιτήριο από τη βάση δεδομένων χρησιμοποιώντας το UUID του
+    
+    \item \textbf{Δημιουργία URL}: Δημιουργείται ένα URL που περιέχει το endpoint της σάρωσης του εισιτηρίου:
+    \begin{center}
+        \texttt{http://localhost:8000/api/v1/tickets/\{ticket\_uuid\}/scan}
+    \end{center}
+    
+    \item \textbf{Κωδικοποίηση QR}: Το URL κωδικοποιείται σε έναν κώδικα QR χρησιμοποιώντας τη βιβλιοθήκη \texttt{qrcode}
+    
+    \item \textbf{Μετατροπή σε Base64}: Ο κώδικας QR μετατρέπεται σε εικόνα PNG και στη συνέχεια σε base64 για εύκολη ενσωμάτωση στο frontend
+    
+    \item \textbf{Αποθήκευση}: Ο base64 κώδικας αποθηκεύεται στη βάση δεδομένων για μελλοντικό αναφορά
+\end{enumerate}
+
+\subsection{Τεχνικά Χαρακτηριστικά QR Code}
+
+\begin{itemize}
+    \item \textbf{Version}: 1 (21x21 pixels) - αρκετό για URL
+    \item \textbf{Box Size}: 10 pixels
+    \item \textbf{Border}: 5 modules
+    \item \textbf{Format}: PNG (Portable Network Graphics)
+    \item \textbf{Encoding}: Base64 για web compatibility
+\end{itemize}
+
+\begin{lstlisting}[caption=QR Code Generation]
+def generate_ticket_qr_code(self, ticket_uuid) -> str:
+    # Retrieve the ticket
+    ticket = self.ticket_repository.get_ticket_by_uuid(
+        ticket_uuid
+    )
+    
+    # Create the scan URL
+    url_to_bind = f"http://localhost:8000/api/v1/"\
+                  f"tickets/{ticket_uuid}/scan"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=5
+    )
+    qr.add_data(url_to_bind)
+    qr.make(fit=True)
+    
+    # Create PNG image
+    img = qr.make_image(fill_color="black", 
+                        back_color="white")
+    
+    # Convert to Base64
+    img_buffer = io.BytesIO()
+    img.save(img_buffer, format="PNG")
+    img_buffer.seek(0)
+    b64 = base64.b64encode(
+        img_buffer.read()
+    ).decode("utf-8")
+    
+    return b64
+\end{lstlisting}
+
+\subsection{Σάρωση QR Code}
+
+Κατά τη σάρωση ενός QR code από έναν χρήστη:
+\begin{enumerate}
+    \item Το κινητό σαρώνει τον κώδικα και ανοίγει το URL
+    \item Το σύστημα επαληθεύει ότι το εισιτήριο είναι σε κατάσταση \texttt{SCHEDULED}
+    \item Η κατάστασή του ενημερώνεται σε \texttt{USED}
+    \item Καταγράφεται η ώρα σάρωσης
+\end{enumerate}
+
+\newpage
+
+% ================================
+% Κεφάλαιο 4: Χρήση της Εφαρμογής
+% ================================
+\chapter{Οδηγός Χρήσης}
+
+\section{Εγκατάσταση και Ρύθμιση}
+
+\subsection{Προαπαιτούμενα}
+\begin{itemize}
+    \item Python 3.10+
+    \item PostgreSQL 12+
+    \item pip (Python package manager)
+\end{itemize}
+
+\subsection{Βήματα Εγκατάστασης}
+
+\begin{enumerate}
+    \item Κλωνοποιήστε το repository:
+    \begin{lstlisting}[language=bash]
+git clone <repository-url>
+cd you-want-ticket
+    \end{lstlisting}
+
+    \item Δημιουργήστε ένα virtual environment:
+    \begin{lstlisting}[language=bash]
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+    \end{lstlisting}
+    
+    \item Εγκαταστήστε τις απαιτούμενες βιβλιοθήκες:
+    \begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+    \end{lstlisting}
+    
+    \item Δημιουργήστε ένα αρχείο \texttt{.env}:
+    \begin{lstlisting}[language=bash]
+SECRET_KEY=your_secret_key_here
+DATABASE_URL=postgresql://user:password@localhost:5434/you_want_ticket
+    \end{lstlisting}
+    
+    \item Εκτελέστε την εφαρμογή:
+    \begin{lstlisting}[language=bash]
+uvicorn main:app --reload
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{Πρόσβαση στην Εφαρμογή}
+
+Μόλις ξεκινήσει η εφαρμογή, μπορείτε να:
+\begin{itemize}
+    \item Ανοίξετε την Swagger UI στη διεύθυνση: \url{http://localhost:8000/api/v1/docs}
+    \item Ανοίξετε την ReDoc στη διεύθυνση: \url{http://localhost:8000/api/v1/redoc}
+\end{itemize}
+
+\section{API Endpoints}
+
+\subsection{Ταυτοποίηση}
+
+\begin{itemize}
+    \item \textbf{POST /api/v1/login}: Σύνδεση χρήστη
+    \item \textbf{POST /api/v1/token/refresh}: Ανανέωση access token
+\end{itemize}
+
+\subsubsection{Σύνδεση με Google Account}
+
+Η εφαρμογή υποστηρίζει επίσης ταυτοποίηση μέσω Google OAuth2. Αυτό επιτρέπει στους χρήστες να συνδεθούν χρησιμοποιώντας τον λογαριασμό Google τους χωρίς να χρειάζεται να δημιουργήσουν έναν νέο κωδικό πρόσβασης.
+
+\paragraph{Διαδικασία Σύνδεσης με Google}
+
+\begin{enumerate}
+    \item \textbf{Λήψη Google Token}: Ο χρήστης συνδέεται με το λογαριασμό Google του και λαμβάνει ένα ID token από το Google OAuth2 service
+    
+    \item \textbf{Αποστολή Token}: Το ID token αποστέλλεται στο endpoint \texttt{POST /api/v1/login/google}
+    
+    \item \textbf{Επαλήθευση Token}: Το σύστημα επαληθεύει ότι το token:
+    \begin{itemize}
+        \item Έχει υπογραφεί από το Google
+        \item Δεν έχει λήξει
+        \item Δεν έχει παραποιηθεί
+        \item Ταιριάζει με το \texttt{GOOGLE\_CLIENT\_ID} που έχει διαμορφωθεί
+    \end{itemize}
+    
+    \item \textbf{Αποσύμπτωση Email}: Από το token, εξάγεται το email του χρήστη και η κατάstaση επαλήθευσης email
+    
+    \item \textbf{Εύρεση ή Δημιουργία Χρήστη}:
+    \begin{itemize}
+        \item Αν υπάρχει χρήστης με αυτό το email, συνδέεται αμέσως
+        \item Αν δεν υπάρχει, δημιουργείται ένας νέος χρήστης με το email από το Google και ένας τυχαίος κωδικός πρόσβασης
+    \end{itemize}
+    
+    \item \textbf{Έκδοση JWT Token}: Ένα JWT access token εκδίδεται με τα στοιχεία του χρήστη
+\end{enumerate}
+
+\paragraph{Τεχνικά Χαρακτηριστικά}
+
+\begin{lstlisting}[caption=Google OAuth2 Login]
+def login_with_google(self, google_token: str) -> TokenDTO:
+    # Verify the Google ID token
+    google_payload = self._verify_google_id_token(google_token)
+    
+    # Extract email from payload
+    email = google_payload.get("email")
+    email_verified = google_payload.get("email_verified", False)
+    
+    if not email:
+        raise HTTPException(
+            status_code=400, 
+            detail="Email not found in Google token"
+        )
+    
+    # Find or create user
+    user = self.user_repository.get_user_by_email(email)
+    if not user:
+        # Create new user with random password
+        random_password = secrets.token_urlsafe(16)
+        user_create = UserCreate(
+            email=email,
+            password=random_password,
+            user_role=UserRole.CUSTOMER
+        )
+        user = self.user_repository.create_user(user_create)
+    
+    # Issue JWT token
+    access_token_expires = timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    access_token = security.create_access_token(
+        user.uuid, 
+        expires_delta=access_token_expires
+    )
+    
+    return TokenDTO(
+        access_token=access_token, 
+        token_type="bearer"
+    )
+
+def _verify_google_id_token(self, token: str) -> dict:
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=500, 
+            detail="Google OAuth not configured"
+        )
+    
+    try:
+        # Verify the token signature and expiration
+        payload = google_id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+        
+        # Verify the issuer
+        if payload.get("iss") not in [
+            "accounts.google.com", 
+            "https://accounts.google.com"
+        ]:
+            raise ValueError("Invalid issuer")
+        
+        return payload
+        
+    except ValueError as e:
+        logger.error(f"Invalid Google token: {str(e)}")
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid Google token"
+        )
+\end{lstlisting}
+
+\paragraph{Προαπαιτούμενα Ρύθμισης Google OAuth}
+
+Για να χρησιμοποιήσετε τη σύνδεση με Google, πρέπει:
+
+\begin{enumerate}
+    \item Να δημιουργήσετε μια Google Cloud Project
+    \item Να ενεργοποιήσετε το Google Identity API
+    \item Να δημιουργήσετε OAuth 2.0 credentials (OAuth 2.0 Client ID)
+    \item Να ορίσετε το \texttt{GOOGLE\_CLIENT\_ID} στο αρχείο \texttt{.env}:
+    \begin{lstlisting}[language=bash]
+GOOGLE_CLIENT_ID=your_client_id_here.apps.googleusercontent.com
+    \end{lstlisting}
+\end{enumerate}
+
+\subsubsection{Παράδειγμα cURL για Google Login}
+
+\begin{lstlisting}[language=bash, caption=Google Login Request]
+curl -X POST "http://localhost:8000/api/v1/login/google" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "google_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+  }'
+\end{lstlisting}
+
+\subsection{Χρήστες}
+
+\begin{itemize}
+    \item \textbf{POST /api/v1/users}: Δημιουργία νέου χρήστη
+    \item \textbf{GET /api/v1/users/me}: Λήψη πληροφοριών τρέχοντος χρήστη
+    \item \textbf{PUT /api/v1/users/me}: Ενημέρωση πληροφοριών χρήστη
+\end{itemize}
+
+\subsection{Εκδηλώσεις}
+
+\begin{itemize}
+    \item \textbf{GET /api/v1/events}: Λήψη όλων των εκδηλώσεων
+    \item \textbf{POST /api/v1/events}: Δημιουργία νέας εκδήλωσης
+    \item \textbf{GET /api/v1/events/{event\_uuid}}: Λήψη λεπτομερειών εκδήλωσης
+    \item \textbf{PUT /api/v1/events/{event\_uuid}}: Ενημέρωση εκδήλωσης
+    \item \textbf{DELETE /api/v1/events/{event\_uuid}}: Ακύρωση εκδήλωσης
+\end{itemize}
+
+\subsection{Κρατήσεις}
+
+\begin{itemize}
+    \item \textbf{POST /api/v1/orders}: Δημιουργία νέας κράτησης
+    \item \textbf{GET /api/v1/orders}: Λήψη κρατήσεων χρήστη
+    \item \textbf{GET /api/v1/orders/{order\_uuid}}: Λήψη λεπτομερειών κράτησης
+    \item \textbf{DELETE /api/v1/orders/{order\_uuid}}: Ακύρωση κράτησης
+\end{itemize}
+
+\subsection{Εισιτήρια}
+
+\begin{itemize}
+    \item \textbf{GET /api/v1/tickets}: Λήψη εισιτηρίων χρήστη
+    \item \textbf{GET /api/v1/tickets/{ticket\_uuid}}: Λήψη λεπτομερειών εισιτηρίου
+    \item \textbf{GET /api/v1/tickets/{ticket\_uuid}/download}: Λήψη PDF εισιτηρίου
+\end{itemize}
+
+\subsection{Χώροι}
+
+\begin{itemize}
+    \item \textbf{GET /api/v1/places}: Λήψη όλων των χώρων
+    \item \textbf{POST /api/v1/places}: Δημιουργία νέου χώρου
+    \item \textbf{GET /api/v1/places/{place\_uuid}}: Λήψη λεπτομερειών χώρου
+    \item \textbf{PUT /api/v1/places/{place\_uuid}}: Ενημέρωση χώρου
+\end{itemize}
+
+\section{Ροή Εργασίας για Τελικούς Χρήστες}
+
+\subsection{Παράδειγμα: Σύνδεση και Κράτηση Εισιτηρίων}
+
+\begin{enumerate}
+    \item \textbf{Δημιουργία λογαριασμού:} Ο χρήστης δημιουργεί έναν λογαριασμό με το email του και έναν κωδικό πρόσβασης
+    
+    \item \textbf{Σύνδεση:} Ο χρήστης συνδέεται με τα στοιχεία του για να λάβει ένα JWT token
+    
+    \item \textbf{Περιήγηση εκδηλώσεων:} Ο χρήστης παρακολουθεί τις διαθέσιμες εκδηλώσεις
+    
+    \item \textbf{Δημιουργία κράτησης:} Επιλέγει μια εκδήλωση και δημιουργεί μια παραγγελία
+    
+    \item \textbf{Λήψη εισιτηρίων:} Λαμβάνει τα εισιτήρια με κώδικες QR
+    
+    \item \textbf{Επιβεβαίωση:} Λαμβάνει email επιβεβαίωσης με τα στοιχεία της κράτησης
+\end{enumerate}
+
+\section{Παράδειγμα cURL Αιτημάτων}
+
+\subsection{Σύνδεση}
+
+\begin{lstlisting}[language=bash, caption=Login Request]
+curl -X POST "http://localhost:8000/api/v1/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "password123"
+  }'
+\end{lstlisting}
+
+\subsection{Δημιουργία Κράτησης}
+
+\begin{lstlisting}[language=bash, caption=Create Order Request]
+curl -X POST "http://localhost:8000/api/v1/orders" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_uuid": "event-uuid-here",
+    "number_of_tickets": 2
+  }'
+\end{lstlisting}
+
+\newpage
+
+% ================================
+% Κεφάλαιο 5: Ασφάλεια
+% ================================
+\chapter{Ασφάλεια}
+
+\section{Μέτρα Ασφαλείας}
+
+\subsection{Κρυπτογράφηση Κωδικών}
+Όλοι οι κωδικοί πρόσβασης αποθηκεύονται κρυπτογραφημένοι χρησιμοποιώντας bcrypt, ένα ισχυρό αλγόριθμο κρυπτογράφησης που είναι αχρησιμοποίητος για αυτό το σκοπό.
+
+\subsection{JWT Authentication}
+Τα JWT tokens χρησιμοποιούνται για ασφαλή ταυτοποίηση. Κάθε token περιέχει πληροφορίες ταυτότητας και ημερομηνία λήξης.
+
+\subsection{Role-Based Access Control}
+Ο ρόλος χρήστη ελέγχεται σε κάθε αίτημα για να εξασφαλιστεί ότι ο χρήστης έχει τα απαιτούμενα δικαιώματα.
+
+\subsection{CORS}
+Όλες οι καταγωγές επιτρέπονται για ανάπτυξη, αλλά αυτό θα πρέπει να διαμορφωθεί κατάλληλα στην παραγωγή.
+
+\subsection{Επικύρωση Δεδομένων}
+Όλα τα δεδομένα εισόδου επικυρώνονται χρησιμοποιώντας Pydantic, ένα ισχυρό framework για validation.
+
+\section{Συστάσεις για Παραγωγή}
+
+\begin{itemize}
+    \item Αλλάξτε το SECRET\_KEY σε ένα ισχυρό μυστικό κλειδί
+    \item Διαμορφώστε το CORS για να επιτρέπει μόνο χαμηλής ταξης καταγωγές
+    \item Χρησιμοποιήστε HTTPS για όλες τις επικοινωνίες
+    \item Ρυθμίστε τη λέσχη μας για τη βάση δεδομένων με ασθενική πρόσβαση
+    \item Ενεργοποιήστε την καταγραφή σφαλμάτων για παρακολούθηση
+    \item Εφαρμόστε περιορισμούς επιτοκίων (rate limiting)
+    \item Χρησιμοποιήστε ένα WAF (Web Application Firewall)
+\end{itemize}
+
+\newpage
+
+% ================================
+% Κεφάλαιο 6: Συμπέρασμα
+% ================================
+\chapter{Συμπέρασμα}
+
+\section{Επιτευχθέντα}
+
+Το έργο ``You Want Ticket'' παρέχει μια ολοκληρωμένη λύση για την κράτηση εισιτηρίων εκδηλώσεων με:
+
+\begin{itemize}
+    \item Σύγχρονη αρχιτεκτονική βασισμένη σε microservices principles
+    \item Ασφαλείς μηχανισμό ταυτοποίησης και εξουσιοδότησης
+    \item Αποτελεσματική διαχείριση δεδομένων με χρήση PostgreSQL και SQLAlchemy
+    \item Αυτοματοποιημένες εργασίες για βελτίωση της εμπειρίας χρήστη
+    \item Γεννήτρια κωδικών QR για ευκολότερη επιβεβαίωση εισόδου
+    \item Ενοποιημένη επικοινωνία μέσω email
+\end{itemize}
+
+\section{Μελλοντικές Βελτιώσεις}
+
+Δυνατές βελτιώσεις για το μέλλον:
+
+\begin{itemize}
+    \item \textbf{Frontend Application}: Δημιουργία ενός web interface χρησιμοποιώντας React ή Vue.js
+    \item \textbf{Mobile Application}: Ανάπτυξη εφαρμογής για κινητά (iOS/Android)
+    \item \textbf{Payment Integration}: Ενσωμάτωση με συστήματα πληρωμής (Stripe, PayPal κ.λπ.)
+    \item \textbf{Advanced Analytics}: Προσθήκη ανάλυσης δεδομένων για τις εκδηλώσεις
+    \item \textbf{Recommendation System}: Σύστημα συστάσεων εκδηλώσεων βάσει προτιμήσεων χρήστη
+    \item \textbf{Multi-language Support}: Υποστήριξη περισσότερων γλωσσών
+    \item \textbf{Notification System}: Push notifications για ενημερώσεις κρατήσεων
+    \item \textbf{Accessibility}: Βελτίωση προσβασιμότητας για άτομα με ειδικές ανάγκες
+\end{itemize}
+
+\section{Τελικά Σχόλια}
+
+Το ``You Want Ticket'' είναι ένα σταθερό και επεκτάσιμο σύστημα κράτησης εισιτηρίων που παρέχει αξιόπιστη λειτουργικότητα για διοργανωτές και χρήστες. Η αρχιτεκτονική του και ο κώδικας είναι σχεδιασμένα για να είναι ευχάριστοι να διατηρηθούν και να επεκταθούν στο μέλλον.
+
+\newpage
+
+% ================================
+% Παράρτημα
+% ================================
+\appendix
+
+\chapter{Αναφορές και Πόροι}
+
+\begin{itemize}
+    \item \textbf{FastAPI Documentation:} \url{https://fastapi.tiangolo.com/}
+    \item \textbf{SQLAlchemy Documentation:} \url{https://docs.sqlalchemy.org/}
+    \item \textbf{PostgreSQL Documentation:} \url{https://www.postgresql.org/docs/}
+    \item \textbf{JWT Introduction:} \url{https://jwt.io/introduction}
+    \item \textbf{APScheduler Documentation:} \url{https://apscheduler.readthedocs.io/}
+    \item \textbf{Pydantic Documentation:} \url{https://docs.pydantic.dev/}
+\end{itemize}
+
+\chapter{Λεξιλόγιο}
+
+\begin{itemize}
+    \item \textbf{API}: Application Programming Interface - Διεπαφή Προγραμματισμού Εφαρμογών
+    \item \textbf{DTO}: Data Transfer Object - Αντικείμενο Μεταφοράς Δεδομένων
+    \item \textbf{JWT}: JSON Web Token - Διακριτικό Web JSON
+    \item \textbf{OAuth2}: Open Authorization 2.0 - Πρωτόκολλο Εξουσιοδότησης
+    \item \textbf{CORS}: Cross-Origin Resource Sharing - Διαμοίραση Πόρων από Διαφορετικές Καταγωγές
+    \item \textbf{QR Code}: Quick Response Code - Κώδικας Γρήγορης Ανταπόκρισης
+    \item \textbf{UUID}: Universally Unique Identifier - Παγκοσμίως Μοναδικό Αναγνωριστικό
+    \item \textbf{ORM}: Object-Relational Mapping - Αντικειμενοστραφή Χαρτογράφηση Σχέσεων
+\end{itemize}
+
+\end{document}
