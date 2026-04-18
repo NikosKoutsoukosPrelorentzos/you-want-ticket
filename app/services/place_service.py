@@ -27,6 +27,10 @@ class PlaceService:
         db_places = self.place_repository.get_places_by_owner(owner_uuid)
         return [PlaceDTO.model_validate(p) for p in db_places]
 
+    def get_all_places(self) -> List[PlaceDTO]:
+        db_places = self.place_repository.get_all_places()
+        return [PlaceDTO.model_validate(p) for p in db_places]
+
     def update_place(self, place_uuid: UUID, place_update: PlaceUpdate, owner_uuid: UUID) -> PlaceDTO:
         db_place = self.place_repository.get_place_by_uuid(place_uuid)
         if not db_place:

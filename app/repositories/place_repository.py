@@ -36,6 +36,9 @@ class PlaceRepository(BaseRepository):
         self.db.refresh(db_place)
         return db_place
 
+    def get_all_places(self) -> list[Place]:
+        return self.db.query(Place).all()
+
     def delete_place(self, place_uuid: UUID) -> int:
         place = self.get_place_by_uuid(place_uuid)
         if not place:
