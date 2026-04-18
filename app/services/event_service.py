@@ -13,17 +13,28 @@ from app.models.event import Event
 from app.models.place import Place
 from app.repositories.event_repository import EventRepository
 from app.enums.event_type import EventType
+from app.repositories.order_repository import OrderRepository
 from app.repositories.place_repository import PlaceRepository
+from app.repositories.ticket_repository import TicketRepository
+from app.repositories.user_repository import UserRepository
+from app.services.email_service import EmailService
 
 logger = setup_logger(__name__)
 
 
 class EventService:
-    def __init__(self, event_repository: EventRepository, place_repository: PlaceRepository,
+    def __init__(self, event_repository: EventRepository,
+                 place_repository: PlaceRepository,
+                 ticket_repository: TicketRepository,
+                 order_repository: OrderRepository,
+                 user_repository: UserRepository,
                  scheduler: Optional[BaseScheduler] = None):
         self.event_repository = event_repository
         self.scheduler = scheduler
         self.place_repository = place_repository
+        self.ticket_repository = ticket_repository
+        self.order_repository = order_repository
+        self.user_repository = user_repository
 
     def create_event(self, event_create_request: EventCreate, user_uuid: UUID) -> EventDTO:
         db_place = self.place_repository.get_place_by_uuid(event_create_request.place_uuid)
@@ -59,6 +70,7 @@ class EventService:
         updated_event = self.event_repository.update_event(event_uuid, event_update_request)
         if not updated_event:
             raise HTTPException(status_code=404, detail="Event not found")
+        self.notify_user_for_event_change(event_uuid, updated_event.title)
         return EventDTO.model_validate(updated_event)
 
     @staticmethod
@@ -119,13 +131,8 @@ class EventService:
         result: int = self.event_repository.cancel_event(event_uuid)
         if result == 0:
             raise HTTPException(status_code=404, detail="Event not found")
-        if self.scheduler:
-            for job_suffix in ("start", "end"):
-                job_id = f"{event_uuid}_{job_suffix}"
-                try:
-                    self.scheduler.remove_job(job_id)
-                except JobLookupError:
-                    logger.warning(f"Scheduler job not found during cancellation: {job_id}")
+        self.order_repository.cancel_orders_by_event_uuid(event_uuid)
+        self.notify_user_for_event_cancel(event_uuid, db_event.title)
         return
 
     def get_events_by_place_uuid(self, place_uuid: UUID) -> List[EventDTO]:
@@ -141,3 +148,19 @@ class EventService:
     def is_overlapping_place_and_time(self, place_uuid: UUID, start_date: datetime, end_date: datetime) -> bool:
         overlapping_events = self.event_repository.get_overlapping_events(place_uuid, start_date, end_date)
         return overlapping_events is not None
+
+    def notify_user_for_event_change(self, event_uuid: UUID, event_name: str):
+        logger.info(f"Notifying users about event {event_uuid} change: {event_name}")
+        orders = self.order_repository.get_all_orders_for_event(event_uuid)
+        for order in orders:
+            user = self.user_repository.get_by_uuid(order.owner_uuid)
+            logger.info(f"Would notify user {user.email} about event change: {event_name}")
+            EmailService.send_event_change_notification(user.email, event_uuid, event_name)
+
+    def notify_user_for_event_cancel(self, event_uuid: UUID, event_name: str):
+        logger.info(f"Notifying users about event {event_uuid} change: {event_name}")
+        orders = self.order_repository.get_all_orders_for_event(event_uuid)
+        for order in orders:
+            user = self.user_repository.get_by_uuid(order.owner_uuid)
+            logger.info(f"Would notify user {user.email} about event change: {event_name}")
+            EmailService.send_event_cancel_notification(user.email, event_uuid, event_name)
