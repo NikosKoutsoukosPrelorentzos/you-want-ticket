@@ -24,7 +24,6 @@ class OrderRepository(BaseRepository):
         return db_order
 
     def get_order_by_uuid(self, order_uuid: UUID) -> Optional[Order]:
-
         return self.db.query(Order).filter(Order.uuid == order_uuid).first()
 
     def get_expired_orders(self, cutoff_time: datetime) -> list[Order]:
@@ -84,4 +83,8 @@ class OrderRepository(BaseRepository):
         if status:
             stmt = stmt.where(Order.status == status)
 
+        return self.db.scalars(stmt).all()
+
+    def get_all_orders_for_event(self, event_uuid: UUID) -> List[Order]:
+        stmt = select(Order).where(Order.event_uuid == event_uuid)
         return self.db.scalars(stmt).all()

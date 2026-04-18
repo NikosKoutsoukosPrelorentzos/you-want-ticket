@@ -77,14 +77,6 @@ def get_place_repository(
     return PlaceRepository(db)
 
 
-def get_event_service(
-        event_repository: EventRepository = Depends(get_event_repository),
-        place_repository: PlaceRepository = Depends(get_place_repository),
-        scheduler=Depends(get_scheduler),
-) -> EventService:
-    return EventService(event_repository,place_repository, scheduler)
-
-
 def get_order_repository(
         db: Session = Depends(get_db)
 ) -> OrderRepository:
@@ -95,6 +87,17 @@ def get_ticket_repository(
         db: Session = Depends(get_db)
 ) -> TicketRepository:
     return TicketRepository(db)
+
+
+def get_event_service(
+        event_repository: EventRepository = Depends(get_event_repository),
+        place_repository: PlaceRepository = Depends(get_place_repository),
+        order_repository: OrderRepository = Depends(get_order_repository),
+        user_repository: UserRepository = Depends(get_user_repository),
+        ticket_repository: TicketRepository = Depends(get_ticket_repository),
+        scheduler=Depends(get_scheduler),
+) -> EventService:
+    return EventService(event_repository,place_repository,ticket_repository,order_repository, user_repository, scheduler)
 
 
 def get_ticket_service(

@@ -79,3 +79,47 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send email: {e}")
             raise e
+
+    @staticmethod
+    def send_event_change_notification(email: EmailStr, event_uuid: str, event_name: str):
+        """Send notification email about event changes."""
+        changes_html = ""
+        full_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; background-color: #ffffff; padding: 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
+                <h2 style="color: #111111; text-align: center;">Event Update: {event_name}</h2>
+                <p style="color: #666666; text-align: center; margin-bottom: 10px;">
+                    <strong>Event ID:</strong> {event_uuid}
+                </p>
+                <p style="color: #555555; text-align: center; margin-bottom: 30px;">
+                    The event has been updated.
+                </p>
+                <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0;" />
+                <p style="color: #888888; font-size: 12px; text-align: center;">
+                    If you have any questions, please contact support.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        params: resend.Emails.SendParams = {
+            "from": "Tickets <onboarding@resend.dev>",
+            "to": "nikoskoutsoukosprelorentzos@gmail.com",
+            "subject": f"Event Update: {event_name}",
+            "html": full_html
+        }
+
+        try:
+            response = resend.Emails.send(params)
+            logger.info(f"Event change notification sent to {email}")
+            return response
+        except Exception as e:
+            logger.error(f"Failed to send event change notification: {e}")
+            raise e
