@@ -1039,6 +1039,531 @@ curl -X POST "http://localhost:8000/api/v1/orders" \
 \newpage
 
 % ================================
+% Κεφάλαιο 7: Διεπαφή Χρήστη (UI)
+% ================================
+\chapter{Διεπαφή Χρήστη}
+
+\section{Επισκόπηση Διεπαφής}
+
+Η εφαρμογή ``You Want Ticket'' διαθέτει μια σύγχρονη και ευχάριστη διεπαφή χρήστη που διαχωρίζει τις δυνατότητες μεταξύ δύο κύριων τύπων χρηστών: \textbf{Πελάτες (Customers)} και \textbf{Διοργανωτές Εκδηλώσεων (Event Organizers)}.
+
+\subsection{Αρχική Δομή Διεπαφής}
+
+Η διεπαφή είναι δομημένη ως εξής:
+\begin{itemize}
+    \item \textbf{Σελίδα Σύνδεσης}: Ταυτοποίηση χρηστών
+    \item \textbf{Σελίδα Εγγραφής}: Δημιουργία νέου λογαριασμού
+    \item \textbf{Σελίδες Πελάτη}: Προβολή εκδηλώσεων, κράτηση εισιτηρίων, ιστορικό παραγγελιών
+    \item \textbf{Σελίδες Διοργανωτή}: Δημιουργία εκδηλώσεων, διαχείριση χώρων, σάρωση QR κωδικών
+    \item \textbf{Σελίδα Εισιτηρίων}: Εμφάνιση εισιτηρίων με κώδικες QR
+\end{itemize}
+
+\section{Ροές Χρήστη}
+
+\subsection{Ροή Πελάτη (Customer Flow)}
+
+\subsubsection{1. Σύνδεση - Login Page}
+
+Η αρχική αλληλεπίδραση του χρήστη ξεκινά με τη σελίδα σύνδεσης.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/login-page.png}
+    \caption{Σελίδα Σύνδεσης - Login Page}
+    \label{fig:login}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα σύνδεσης παρέχει:
+\begin{itemize}
+    \item \textbf{Πεδία Εισόδου}: Email και κωδικό πρόσβασης
+    \item \textbf{Κουμπί Σύνδεσης}: Υποβολή στοιχείων ταυτοποίησης
+    \item \textbf{Google OAuth2}: Δυνατότητα σύνδεσης μέσω Google Account
+    \item \textbf{Σύνδεσμος Εγγραφής}: Ανακατεύθυνση σε σελίδα δημιουργίας λογαριασμού
+    \item \textbf{Επικύρωση}: Ενημέρωση για ανακριβή στοιχεία ή λάθος κωδικό
+\end{itemize}
+
+\paragraph{Τεχνικά Χαρακτηριστικά}
+\begin{itemize}
+    \item Χρήση OAuth2 με password flow
+    \item JWT token generation και αποθήκευση
+    \item Υποστήριξη Google OAuth2 Login
+    \item HTTP POST request στο endpoint \texttt{/api/v1/login}
+\end{itemize}
+
+\subsubsection{2. Εγγραφή - Register Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/register=page.png}
+    \caption{Σελίδα Εγγραφής - Register Page}
+    \label{fig:register}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα εγγραφής επιτρέπει:
+\begin{itemize}
+    \item \textbf{Εισαγωγή Email}: Ο χρήστης εισάγει το email του
+    \item \textbf{Εισαγωγή Κωδικού}: Δημιουργία ισχυρού κωδικού πρόσβασης
+    \item \textbf{Επιβεβαίωση Κωδικού}: Επανάληψη κωδικού για σίγουρη εισαγωγή
+    \item \textbf{Επιλογή Ρόλου}: Επιλογή μεταξύ Customer ή Event Organizer
+    \item \textbf{Κουμπί Εγγραφής}: Δημιουργία λογαριασμού
+\end{itemize}
+
+\paragraph{Τεχνικά Χαρακτηριστικά}
+\begin{itemize}
+    \item Validation email format
+    \item Ισχυρός έλεγχος κωδικού (minimum length, characters)
+    \item Δημιουργία νέου User record στη βάση
+    \item Bcrypt hashing για κωδικό πρόσβασης
+\end{itemize}
+
+\subsubsection{3. Διαθέσιμες Εκδηλώσεις - Available Events Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-available-events-page.png}
+    \caption{Σελίδα Διαθέσιμων Εκδηλώσεων - Available Events}
+    \label{fig:available-events}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα διαθέσιμων εκδηλώσεων παρουσιάζει:
+\begin{itemize}
+    \item \textbf{Λίστα Εκδηλώσεων}: Όλες οι υπό διεξαγωγή και προσχεδιασμένες εκδηλώσεις
+    \item \textbf{Κάρτες Εκδηλώσεων}: Κάθε εκδήλωση εμφανίζεται με:
+    \begin{itemize}
+        \item Εικόνα εκδήλωσης
+        \item Τίτλος
+        \item Περιγραφή
+        \item Ημερομηνία και ώρα
+        \item Τύπος εκδήλωσης
+        \item Χώρος (τοποθεσία)
+        \item Διαθέσιμα εισιτήρια
+        \item Τιμή (εάν εφαρμόζεται)
+    \end{itemize}
+    \item \textbf{Κουμπί Κράτησης}: Για επιλογή της εκδήλωσης
+    \item \textbf{Φίλτρα}: Φιλτράρισμα ανά τύπο, ημερομηνία, ή τοποθεσία
+    \item \textbf{Αναζήτηση}: Αναζήτηση εκδηλώσεων ανά όνομα
+\end{itemize}
+
+\paragraph{Τεχνικά Χαρακτηριστικά}
+\begin{itemize}
+    \item HTTP GET request στο \texttt{/api/v1/events}
+    \item Pagination ή infinite scroll
+    \item Real-time display των διαθέσιμων εισιτηρίων
+    \item Status filtering (SCHEDULED, ACTIVE)
+\end{itemize}
+
+\subsubsection{4. Κράτηση Εισιτηρίων - Book Event Ticket Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-book-event-ticket-page.png}
+    \caption{Σελίδα Κράτησης Εισιτηρίων - Book Event Ticket}
+    \label{fig:book-ticket}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Στη σελίδα κράτησης ο χρήστης:
+\begin{itemize}
+    \item \textbf{Αναλυτικά Στοιχεία Εκδήλωσης}: Πλήρες περιγραφή της εκδήλωσης
+    \item \textbf{Επιλογή Αριθμού Εισιτηρίων}: Spinner ή input πεδίο για επιλογή ποσότητας
+    \item \textbf{Προεπισκόπηση Κόστους}: Εμφάνιση συνολικής τιμής
+    \item \textbf{Πληροφορίες Χώρου}: Διεύθυνση, χαρτογραφία, χωρητικότητα
+    \item \textbf{Κουμπί Ολοκλήρωσης}: ``Finalize Order'' - Ολοκλήρωση παραγγελίας
+    \item \textbf{Επαλήθευση Διαθεσιμότητας}: Έλεγχος σε real-time των διαθέσιμων εισιτηρίων
+\end{itemize}
+
+\paragraph{Ροή Κράτησης}
+\begin{enumerate}
+    \item Χρήστης εισέρχεται στη σελίδα κράτησης για συγκεκριμένη εκδήλωση
+    \item Επιλέγει τον αριθμό εισιτηρίων που θέλει
+    \item Εμφανίζεται η συνολική τιμή
+    \item Κάνει κλικ στο κουμπί ``Finalize Order''
+    \item Το σύστημα δημιουργεί την παραγγελία
+    \item Ανακατεύθυνση στη σελίδα ολοκλήρωσης
+\end{enumerate}
+
+\subsubsection{5. Ολοκλήρωση Παραγγελίας - Finalize Order Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-finilize-order-page.png}
+    \caption{Σελίδα Ολοκλήρωσης Παραγγελίας - Finalize Order}
+    \label{fig:finalize-order}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα ολοκλήρωσης δείχνει:
+\begin{itemize}
+    \item \textbf{Σύνοψη Παραγγελίας}: Λεπτομέρειες της δημιουργηθείσας παραγγελίας
+    \item \textbf{UUID Παραγγελίας}: Μοναδικό αναγνωριστικό για αναφορά
+    \item \textbf{Αριθμός Εισιτηρίων}: Πόσα εισιτήρια κρατήθηκαν
+    \item \textbf{Κατάσταση Παραγγελίας}: IN\_PROGRESS ή CONFIRMED
+    \item \textbf{Κουμπί Συνέχειας}: Προχώρηση στη σελίδα εισιτηρίων
+    \item \textbf{Ενημέρωση}: Το email επιβεβαίωσης θα αποσταλεί
+\end{itemize}
+
+\subsubsection{6. Εισιτήρια - Ticket QR Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-ticket\ qr-page.png}
+    \caption{Σελίδα Εισιτηρίων με Κώδικες QR}
+    \label{fig:ticket-qr}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα εισιτηρίων παρουσιάζει:
+\begin{itemize}
+    \item \textbf{Κώδικας QR}: Σάρωση για σάρωση κατά την είσοδο
+    \item \textbf{UUID Εισιτηρίου}: Μοναδικό αναγνωριστικό
+    \item \textbf{Πληροφορίες Εκδήλωσης}: Ημερομηνία, ώρα, χώρος
+    \item \textbf{Κατάσταση Εισιτηρίου}: SCHEDULED, USED, ή CANCELLED
+    \item \textbf{Κουμπί Λήψης}: Download εισιτηρίου σε PDF
+    \item \textbf{Κουμπί Εκτύπωσης}: Εκτύπωση εισιτηρίου
+\end{itemize}
+
+\subsubsection{7. Ιστορικό Παραγγελιών - Order History Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-order-history.png}
+    \caption{Σελίδα Ιστορικού Παραγγελιών - Order History}
+    \label{fig:order-history}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα ιστορικού παραγγελιών διαθέτει:
+\begin{itemize}
+    \item \textbf{Λίστα Παραγγελιών}: Όλες οι παραγγελίες του χρήστη
+    \item \textbf{Φίλτρα Κατάστασης}: Ενεργές, ολοκληρωμένες, ακυρωθείσες
+    \item \textbf{Χρονική Ταξινόμηση}: Πιο πρόσφατες πρώτα
+    \item \textbf{Κάρτες Παραγγελιών}: Κάθε παραγγελία δείχνει:
+    \begin{itemize}
+        \item Όνομα εκδήλωσης
+        \item Ημερομηνία κράτησης
+        \item Αριθμό εισιτηρίων
+        \item Κατάσταση (IN\_PROGRESS, CONFIRMED, CANCELLED)
+        \item Σύνολο κόστους
+    \end{itemize}
+    \item \textbf{Κουμπί Λεπτομερειών}: Προβολή πλήρων στοιχείων
+    \item \textbf{Κουμπί Ακύρωσης}: Ακύρωση παραγγελίας (εάν επιτρέπεται)
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-order-history-02.png}
+    \caption{Σελίδα Ιστορικού Παραγγελιών - Εναλλακτική Προβολή}
+    \label{fig:order-history-02}
+\end{figure}
+
+\subsubsection{8. Email Ειδοποίησης - Ticket Email}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-ticket-email.png}
+    \caption{Email Ειδοποίησης Εισιτηρίου - Ticket Email Notification}
+    \label{fig:ticket-email}
+\end{figure}
+
+\paragraph{Περιεχόμενο Email}
+
+Το email επιβεβαίωσης εισιτηρίου περιέχει:
+\begin{itemize}
+    \item \textbf{Θέμα}: ``Επιβεβαίωση Κράτησης - Your Tickets for [Event Name]''
+    \item \textbf{Χαιρετισμό}: Προσωπικό χαιρετισμό με το όνομα του χρήστη
+    \item \textbf{Λεπτομέρειες Παραγγελίας}:
+    \begin{itemize}
+        \item Όνομα εκδήλωσης
+        \item Ημερομηνία και ώρα
+        \item Χώρος (διεύθυνση)
+        \item Αριθμό εισιτηρίων
+        \item UUID παραγγελίας
+    \end{itemize}
+    \item \textbf{Κώδικας QR}: Embedded εικόνα QR κώδικα
+    \item \textbf{Οδηγίες}: Πώς να σαρώσετε το QR στη σάρωση
+    \item \textbf{Τεχνικές Πληροφορίες}: Δυνατότητα λήψης εισιτηρίου
+    \item \textbf{Contact}: Στοιχεία επικοινωνίας για υποστήριξη
+\end{itemize}
+
+\paragraph{Υπηρεσία Email}
+
+\begin{itemize}
+    \item \textbf{Provider}: Resend Email Service
+    \item \textbf{Trigger}: Κατά την ολοκλήρωση παραγγελίας
+    \item \textbf{Templates}: HTML templates για άλλα email
+    \item \textbf{Retry Logic}: Αυτόματη επανάληψη αποστολής σε περίπτωση αποτυχίας
+\end{itemize}
+
+\subsubsection{9. Email Ενημέρωσης Εκδήλωσης}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-event-update-email.png}
+    \caption{Email Ενημέρωσης Εκδήλωσης - Event Update Email}
+    \label{fig:event-update-email}
+\end{figure}
+
+\paragraph{Περιεχόμενο}
+
+Το email ενημέρωσης αποστέλλεται όταν:
+\begin{itemize}
+    \item Αλλάξει η ημερομηνία ή ώρα της εκδήλωσης
+    \item Αλλάξει ο χώρος
+    \item Δημοσιευθούν σημαντικές πληροφορίες
+\end{itemize}
+
+Περιέχει:
+\begin{itemize}
+    \item \textbf{Τι Άλλαξε}: Σαφής ενημέρωση για τις αλλαγές
+    \item \textbf{Νέα Στοιχεία}: Νέα ημερομηνία, ώρα, ή τοποθεσία
+    \item \textbf{Ενέργειες Χρήστη}: Δυνατότητα ακύρωσης ή ενημέρωσης
+\end{itemize}
+
+\subsubsection{10. Email Ακύρωσης Εκδήλωσης}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/customer-event-cancel-email.png}
+    \caption{Email Ακύρωσης Εκδήλωσης - Event Cancellation Email}
+    \label{fig:event-cancel-email}
+\end{figure}
+
+\paragraph{Περιεχόμενο}
+
+Το email ακύρωσης αποστέλλεται όταν ακυρωθεί μια εκδήλωση:
+\begin{itemize}
+    \item \textbf{Ανακοίνωση Ακύρωσης}: Σαφής ενημέρωση ότι η εκδήλωση ακυρώθηκε
+    \item \textbf{Λόγος Ακύρωσης}: Εάν δίνεται από τον διοργανωτή
+    \item \textbf{Επιστροφή Χρημάτων}: Πληροφορίες για refund
+    \item \textbf{Χρονικό Διάστημα}: Πότε θα λάβει το refund
+    \item \textbf{Επικοινωνία}: Πώς να επικοινωνήσει για περισσότερες πληροφορίες
+\end{itemize}
+
+\newpage
+
+\subsection{Ροή Διοργανωτή Εκδηλώσεων (Event Organizer Flow)}
+
+\subsubsection{1. Δημιουργία Χώρου - Create Place Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/organizer-create-place.png}
+    \caption{Σελίδα Δημιουργίας Χώρου - Create Place}
+    \label{fig:create-place}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα δημιουργίας χώρου επιτρέπει τον διοργανωτή να:
+\begin{itemize}
+    \item \textbf{Εισαγωγή Ονόματος}: Όνομα του χώρου
+    \item \textbf{Διεύθυνση}: Πλήρης διεύθυνση του χώρου
+    \item \textbf{Χωρητικότητα}: Μέγιστος αριθμός ατόμων
+    \item \textbf{Περιγραφή}: Προαιρετική περιγραφή
+    \item \textbf{Υπηρεσίες}: Amenities του χώρου (wifi, parking, κ.λπ.)
+    \item \textbf{Χαρτογραφία}: Ενσωμάτωση χάρτη για τοποθεσία
+    \item \textbf{Κουμπί Δημιουργίας}: ``Create Place''
+\end{itemize}
+
+\subsubsection{2. Διαχείριση Χώρων - Organizer Places Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/organizer-places.png}
+    \caption{Σελίδα Διαχείρισης Χώρων - Organizer Places}
+    \label{fig:organizer-places}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα διαχείρισης χώρων παρουσιάζει:
+\begin{itemize}
+    \item \textbf{Λίστα Χώρων}: Όλοι οι χώροι που έχει δημιουργήσει ο διοργανωτής
+    \item \textbf{Κάρτες Χώρων}: Κάθε χώρος δείχνει:
+    \begin{itemize}
+        \item Εικόνα χώρου
+        \item Όνομα
+        \item Διεύθυνση
+        \item Χωρητικότητα
+        \item Αριθμό εκδηλώσεων που χρησιμοποιούν τον χώρο
+    \end{itemize}
+    \item \textbf{Κουμπί Επεξεργασίας}: Τροποποίηση στοιχείων χώρου
+    \item \textbf{Κουμπί Διαγραφής}: Αφαίρεση χώρου
+    \item \textbf{Κουμπί Προσθήκης}: Δημιουργία νέου χώρου
+    \item \textbf{Αναζήτηση}: Αναζήτηση χώρων ανά όνομα
+\end{itemize}
+
+\subsubsection{3. Δημιουργία Εκδήλωσης - Create Event Page}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/organizer-create-event-page.png}
+    \caption{Σελίδα Δημιουργίας Εκδήλωσης - Create Event}
+    \label{fig:create-event}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα δημιουργίας εκδήλωσης διαθέτει:
+\begin{itemize}
+    \item \textbf{Τίτλος}: Όνομα της εκδήλωσης
+    \item \textbf{Περιγραφή}: Λεπτομερής περιγραφή
+    \item \textbf{Τύπος Εκδήλωσης}: Dropdown με επιλογές (συναυλία, θέατρο, αθλητικό γεγονός κ.λπ.)
+    \item \textbf{Χώρος}: Επιλογή από τους δημιουργημένους χώρους
+    \item \textbf{Ημερομηνία Έναρξης}: Επιλογή ημερομηνίας και ώρας
+    \item \textbf{Ημερομηνία Λήξης}: Ώρα λήξης εκδήλωσης
+    \item \textbf{Αριθμός Εισιτηρίων}: Συνολικός αριθμός διαθέσιμων εισιτηρίων
+    \item \textbf{Τιμή Εισιτηρίου}: Τιμή ανά εισιτήριο
+    \item \textbf{Εικόνα}: Upload εικόνας εκδήλωσης
+    \item \textbf{Κουμπί Δημιουργίας}: ``Create Event''
+\end{itemize}
+
+\paragraph{Ροή Δημιουργίας}
+\begin{enumerate}
+    \item Διοργανωτής συμπληρώνει όλα τα απαιτούμενα πεδία
+    \item Σύστημα επικυρώνει τα δεδομένα
+    \item Έλεγχος για διαθεσιμότητα χώρου κατά τη δεδομένη ημερομηνία
+    \item Δημιουργία εκδήλωσης με κατάσταση SCHEDULED
+    \item Ανακατεύθυνση στη σελίδα λεπτομερειών εκδήλωσης
+\end{enumerate}
+
+\subsubsection{4. Ιδιόκτητες Εκδηλώσεις - Organizer Owned Events}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/organizer-owned-events.png}
+    \caption{Σελίδα Ιδιόκτητων Εκδηλώσεων - Organizer Owned Events}
+    \label{fig:owned-events}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα ιδιόκτητων εκδηλώσεων δείχνει:
+\begin{itemize}
+    \item \textbf{Λίστα Εκδηλώσεων}: Όλες οι εκδηλώσεις που δημιούργησε ο διοργανωτής
+    \item \textbf{Φίλτρα Κατάστασης}:
+    \begin{itemize}
+        \item SCHEDULED - Προσχεδιασμένες
+        \item ACTIVE - Υπό διεξαγωγή
+        \item FINISHED - Ολοκληρωμένες
+        \item CANCELLED - Ακυρωθείσες
+    \end{itemize}
+    \item \textbf{Κάρτες Εκδηλώσεων}: Κάθε εκδήλωση δείχνει:
+    \begin{itemize}
+        \item Εικόνα
+        \item Τίτλος
+        \item Ημερομηνία/Ώρα
+        \item Χώρος
+        \item Κατάσταση
+        \item Αριθμό πωληθέντων εισιτηρίων
+        \item Διαθέσιμα εισιτήρια
+    \end{itemize}
+    \item \textbf{Κουμπί Επεξεργασίας}: Τροποποίηση εκδήλωσης
+    \item \textbf{Κουμπί Ακύρωσης}: Ακύρωση εκδήλωσης
+    \item \textbf{Κουμπί Λεπτομερειών}: Προβολή αναλυτικών στοιχείων
+    \item \textbf{Κουμπί Σάρωσης QR}: Σάρωση QR κωδικών εισιτηρίων
+\end{itemize}
+
+\subsubsection{5. Σάρωση QR Κωδικών - QR Scanner}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ui-screenshots/organizer-qr-scanner.png}
+    \caption{Σελίδα Σάρωσης QR Κωδικών - QR Scanner}
+    \label{fig:qr-scanner}
+\end{figure}
+
+\paragraph{Λειτουργικότητα}
+
+Η σελίδα σάρωσης QR κωδικών παρέχει:
+\begin{itemize}
+    \item \textbf{Camera Feed}: Live ροή κάμερας του κινητού
+    \item \textbf{Auto-Detection}: Αυτόματη ανίχνευση QR κωδικών
+    \item \textbf{Confirmation Sound}: Ήχος επιβεβαίωσης κατά τη σάρωση
+    \item \textbf{Scanned Tickets List}: Λίστα σαρωμένων εισιτηρίων με:
+    \begin{itemize}
+        \item Όνομα χρήστη
+        \item Ώρα σάρωσης
+        \item Status (USED)
+        \item Αριθμό εισιτηρίου
+    \end{itemize}
+    \item \textbf{Statistics}:
+    \begin{itemize}
+        \item Σύνολο εισιτηρίων
+        \item Σαρωμένα εισιτήρια
+        \item Υπόλοιπα εισιτήρια
+        \item Ποσοστό παρουσίας
+    \end{itemize}
+    \item \textbf{Export Report}: Εξαγωγή αναφοράς παρουσίας σε CSV
+\end{itemize}
+
+\paragraph{Ροή Σάρωσης}
+\begin{enumerate}
+    \item Διοργανωτής ανοίγει τη σελίδα σάρωσης
+    \item Κάμερα ενεργοποιείται
+    \item Σάρωση QR κώδικα εισιτηρίου με κινητό
+    \item Σύστημα ανιχνεύει το QR και εξάγει το URL
+    \item API endpoint \texttt{/api/v1/tickets/{ticket\_uuid}/scan} καλείται
+    \item Κατάσταση εισιτηρίου ενημερώνεται σε USED
+    \item Ηχητική ενημέρωση για επιτυχή σάρωση
+    \item Εγγραφή ώρας σάρωσης
+    \item Εμφάνιση επιβεβαίωσης στην οθόνη
+\end{enumerate}
+
+\newpage
+
+\section{User Experience Design}
+
+\subsection{Αρχές Σχεδιασμού}
+
+Η διεπαφή ακολουθεί τις ακόλουθες αρχές:
+
+\begin{itemize}
+    \item \textbf{Ευχρηστία}: Απλή και κατανοητή διαδικασία για όλα τα επίπεδα χρήστη
+    \item \textbf{Αποτελεσματικότητα}: Ελάχιστος αριθμός κλικ για κάθε ενέργεια
+    \item \textbf{Ασφάλεια}: Προστασία ευαίσθητων δεδομένων χρήστη
+    \item \textbf{Προσβασιμότητα}: Υποστήριξη για άτομα με ειδικές ανάγκες
+    \item \textbf{Responsive}: Λειτουργία σε desktop, tablet, και mobile devices
+    \item \textbf{Ταχύτητα}: Γρήγορη φόρτωση σελίδων και API responses
+\end{itemize}
+
+\subsection{Χρώματα και Θέματα}
+
+\begin{itemize}
+    \item \textbf{Πρωτεύων Χρώμα}: Μπλε για κύρια CTA buttons
+    \item \textbf{Δευτερεύων Χρώμα}: Γκρι για δευτερεύουσες ενέργειες
+    \item \textbf{Κόκκινο}: Για ακύρωση ή διαγραφή
+    \item \textbf{Πράσινο}: Για επιτυχία ή επιβεβαίωση
+    \item \textbf{Κίτρινο/Πορτοκαλί}: Για προειδοποιήσεις
+\end{itemize}
+
+\subsection{Responsive Design}
+
+\begin{itemize}
+    \item \textbf{Mobile First}: Σχεδιασμένο αρχικά για κινητά devices
+    \item \textbf{Breakpoints}:
+    \begin{itemize}
+        \item Extra Small (xs): < 576px
+        \item Small (sm): ≥ 576px
+        \item Medium (md): ≥ 768px
+        \item Large (lg): ≥ 992px
+        \item Extra Large (xl): ≥ 1200px
+    \end{itemize}
+    \item \textbf{Touch Friendly}: Large buttons για ευχερή σάρωση
+    \item \textbf{Scrolling}: Vertical scrolling σε mobile για navigation
+\end{itemize}
+
+% ================================
 % Παράρτημα
 % ================================
 \appendix
@@ -1052,6 +1577,9 @@ curl -X POST "http://localhost:8000/api/v1/orders" \
     \item \textbf{JWT Introduction:} \url{https://jwt.io/introduction}
     \item \textbf{APScheduler Documentation:} \url{https://apscheduler.readthedocs.io/}
     \item \textbf{Pydantic Documentation:} \url{https://docs.pydantic.dev/}
+    \item \textbf{QR Code Generation:} \url{https://github.com/lincolnloop/python-qrcode}
+    \item \textbf{Resend Email Service:} \url{https://resend.com/}
+    \item \textbf{Google OAuth2:} \url{https://developers.google.com/identity/protocols/oauth2}
 \end{itemize}
 
 \chapter{Λεξιλόγιο}
@@ -1065,6 +1593,49 @@ curl -X POST "http://localhost:8000/api/v1/orders" \
     \item \textbf{QR Code}: Quick Response Code - Κώδικας Γρήγορης Ανταπόκρισης
     \item \textbf{UUID}: Universally Unique Identifier - Παγκοσμίως Μοναδικό Αναγνωριστικό
     \item \textbf{ORM}: Object-Relational Mapping - Αντικειμενοστραφή Χαρτογράφηση Σχέσεων
+    \item \textbf{CTA}: Call To Action - Κλήση για Ενέργεια
+    \item \textbf{UX}: User Experience - Εμπειρία Χρήστη
+    \item \textbf{UI}: User Interface - Διεπαφή Χρήστη
+    \item \textbf{PDF}: Portable Document Format - Φορητή Μορφή Εγγράφου
+    \item \textbf{CSV}: Comma-Separated Values - Τιμές Διαχωρισμένες με Κόμμα
 \end{itemize}
+
+\chapter{Σύνοψη Αρχιτεκτονικής Ροών}
+
+\section{Ροή Δημιουργίας Παραγγελίας}
+
+\begin{enumerate}
+    \item Χρήστης εισέρχεται στη σελίδα διαθέσιμων εκδηλώσεων
+    \item GET request στο \texttt{/api/v1/events}
+    \item Λαμβάνει λίστα εκδηλώσεων σε JSON
+    \item Επιλέγει μία εκδήλωση
+    \item Εισέρχεται στη σελίδα κράτησης
+    \item Επιλέγει αριθμό εισιτηρίων
+    \item POST request στο \texttt{/api/v1/orders}
+    \item OrderService επικυρώνει διαθεσιμότητα
+    \item EventService αφαιρεί διαθέσιμα εισιτήρια
+    \item Δημιουργία Order record με κατάσταση IN\_PROGRESS
+    \item TicketService δημιουργεί Ticket records
+    \item Δημιουργία QR κωδικών
+    \item EmailService στέλνει επιβεβαίωση
+    \item Ενημέρωση κατάστασης σε CONFIRMED
+    \item Ανακατεύθυνση σε σελίδα εισιτηρίων
+\end{enumerate}
+
+\section{Ροή Σάρωσης Εισιτηρίου}
+
+\begin{enumerate}
+    \item Διοργανωτής ανοίγει σελίδα σάρωσης QR
+    \item Κάμερα ενεργοποιείται
+    \item Σάρωση QR κώδικα
+    \item Εξαγωγή URL από QR
+    \item GET request στο \texttt{/api/v1/tickets/{ticket\_uuid}/scan}
+    \item TicketService επαληθεύει εισιτήριο
+    \item Ενημέρωση κατάστασης εισιτηρίου σε USED
+    \item Εγγραφή ώρας σάρωσης
+    \item Ηχητική ενημέρωση
+    \item Εμφάνιση επιβεβαίωσης
+    \item Ενημέρωση στατιστικών
+\end{enumerate}
 
 \end{document}
