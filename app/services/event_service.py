@@ -131,13 +131,7 @@ class EventService:
         result: int = self.event_repository.cancel_event(event_uuid)
         if result == 0:
             raise HTTPException(status_code=404, detail="Event not found")
-        if self.scheduler:
-            for job_suffix in ("start", "end"):
-                job_id = f"{event_uuid}_{job_suffix}"
-                try:
-                    self.scheduler.remove_job(job_id)
-                except JobLookupError:
-                    logger.warning(f"Scheduler job not found during cancellation: {job_id}")
+        self.notify_user_for_event_cancel(event_uuid, db_event.title)
         return
 
     def get_events_by_place_uuid(self, place_uuid: UUID) -> List[EventDTO]:
@@ -161,3 +155,11 @@ class EventService:
             user = self.user_repository.get_by_uuid(order.owner_uuid)
             logger.info(f"Would notify user {user.email} about event change: {event_name}")
             EmailService.send_event_change_notification(user.email, event_uuid, event_name)
+
+    def notify_user_for_event_cancel(self, event_uuid: UUID, event_name: str):
+        logger.info(f"Notifying users about event {event_uuid} change: {event_name}")
+        orders = self.order_repository.get_all_orders_for_event(event_uuid)
+        for order in orders:
+            user = self.user_repository.get_by_uuid(order.owner_uuid)
+            logger.info(f"Would notify user {user.email} about event change: {event_name}")
+            EmailService.send_event_cancel_notification(user.email, event_uuid, event_name)
