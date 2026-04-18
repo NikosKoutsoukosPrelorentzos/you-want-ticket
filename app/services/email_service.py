@@ -137,7 +137,7 @@ class EmailService:
             </head>
             <body style="font-family: Arial, sans-serif; background-color: #ffffff; padding: 20px; margin: 0;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
-                    <h2 style="color: #111111; text-align: center;">Event Update: {event_name}</h2>
+                    <h2 style="color: #111111; text-align: center;">Event Cancel: {event_name}</h2>
                     <p style="color: #666666; text-align: center; margin-bottom: 10px;">
                         <strong>Event ID:</strong> {event_uuid}
                     </p>

@@ -88,3 +88,14 @@ class OrderRepository(BaseRepository):
     def get_all_orders_for_event(self, event_uuid: UUID) -> List[Order]:
         stmt = select(Order).where(Order.event_uuid == event_uuid)
         return self.db.scalars(stmt).all()
+
+    def cancel_orders_by_event_uuid(self, event_uuid):
+        stmt = (update(Order)
+                .where(Order.event_uuid == event_uuid)
+                .values(status=OrderStatus.CANCELLED)
+                .values(updated_date=datetime.utcnow())
+                .execution_options(synchronize_session="fetch")
+                )
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount

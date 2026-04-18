@@ -131,6 +131,7 @@ class EventService:
         result: int = self.event_repository.cancel_event(event_uuid)
         if result == 0:
             raise HTTPException(status_code=404, detail="Event not found")
+        self.order_repository.cancel_orders_by_event_uuid(event_uuid)
         self.notify_user_for_event_cancel(event_uuid, db_event.title)
         return
 
