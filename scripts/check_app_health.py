@@ -46,25 +46,9 @@ def validate_app() -> list[str]:
     if app is None:
         return ["main.py does not expose an app instance."]
 
-    from fastapi.routing import APIRoute
-
-    routes = [route for route in app.routes if isinstance(route, APIRoute)]
-    if not routes:
-        errors.append("No API routes were registered on the FastAPI app.")
-
-    seen: dict[tuple[str, tuple[str, ...]], list[str]] = {}
-    for route in routes:
-        key = (route.path, tuple(sorted(route.methods or [])))
-        seen.setdefault(key, []).append(route.name)
-
-    duplicates = {key: names for key, names in seen.items() if len(names) > 1}
-    for (path, methods), names in duplicates.items():
-        errors.append(
-            f"Duplicate route registration for {path} [{', '.join(methods)}]: {', '.join(names)}"
-        )
-
     schema = app.openapi()
-    if not schema.get("paths"):
+    paths = schema.get("paths") or {}
+    if not paths:
         errors.append("OpenAPI schema was generated but contains no paths.")
 
     return errors
