@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if [ -x "./env/Scripts/python.exe" ]; then
+    python_bin="./env/Scripts/python.exe"
+elif [ -x "./venv/Scripts/python.exe" ]; then
+    python_bin="./venv/Scripts/python.exe"
+elif [ -x "./env/bin/python" ]; then
+    python_bin="./env/bin/python"
+elif [ -x "./venv/bin/python" ]; then
+    python_bin="./venv/bin/python"
+else
+    python_bin="${PYTHON:-python}"
+fi
+
+"$python_bin" scripts/check_app_health.py
+
+"$python_bin" -m pytest
+pytest_status=$?
+if [ "$pytest_status" -ne 0 ] && [ "$pytest_status" -ne 5 ]; then
+    exit "$pytest_status"
+fi
+
+"$python_bin" -m mypy app

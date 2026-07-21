@@ -736,6 +736,29 @@ uvicorn main:app --reload
     \item Ανοίξετε την ReDoc στη διεύθυνση: \url{http://localhost:8000/api/v1/redoc}
 \end{itemize}
 
+\subsection{Ροή Git Hooks και CI/CD}
+
+Για να διασφαλιστεί μια σταθερή διαδικασία παράδοσης κώδικα, το έργο χρησιμοποιεί Git hooks τοπικά και Jenkins στο CI/CD περιβάλλον. Η επιλεγμένη προσέγγιση είναι:
+\begin{itemize}
+    \item \textbf{Pre-commit hook}: εκτελεί γρήγορους τοπικούς ελέγχους πριν από κάθε commit
+    \item \textbf{Pre-push hook}: εκτελεί πιο εκτεταμένους ελέγχους πριν από το push
+    \item \textbf{Jenkins pipeline}: επανεκτελεί τους ελέγχους στον server όταν ενεργοποιηθεί από webhook στο Git repository
+\end{itemize}
+
+Για να ενεργοποιηθούν τα hooks του repository, ο developer πρέπει να ορίσει το hook path με:
+\begin{lstlisting}[language=bash]
+git config core.hooksPath .githooks
+\end{lstlisting}
+
+Οι έλεγχοι χωρίζονται ως εξής:
+\begin{itemize}
+    \item \textbf{Τοπικά, στο pre-commit}: έλεγχος για πιθανά secrets και γρήγορος έλεγχος συντακτικού σε όλα τα Python αρχεία με το \texttt{scripts/check_python_syntax.py}
+    \item \textbf{Τοπικά, στο pre-push}: \texttt{scripts/check_app_health.py} για import/startup smoke test και έλεγχο διπλών routes, μαζί με \texttt{pytest} και \texttt{mypy}
+    \item \textbf{Στο CI/CD με Jenkins}: επανεκτέλεση των ίδιων ελέγχων, ώστε να επιβεβαιώνεται ότι ο κώδικας που έφτασε στο αποθετήριο πληροί τα ίδια κριτήρια ποιότητας
+\end{itemize}
+
+Η επιλογή webhook-based ενεργοποίησης για το Jenkins επιτρέπει το pipeline να ξεκινά αυτόματα μετά από ενημερώσεις στο repository, χωρίς να απαιτείται manual trigger από τον developer.
+
 \section{API Endpoints}
 
 \subsection{Ταυτοποίηση}
