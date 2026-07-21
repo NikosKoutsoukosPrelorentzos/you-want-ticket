@@ -5,33 +5,70 @@ pipeline {
         timestamps()
     }
 
+    environment {
+        VENV = "${WORKSPACE}/.venv"
+    }
+
     stages {
+        stage('Create Environment') {
+            steps {
+                sh '''
+                    python3 --version
+                    python3 -m venv "$VENV"
+                    "$VENV/bin/python" -m pip install --upgrade pip
+                '''
+            }
+        }
+
         stage('Install') {
             steps {
-                sh 'python -m pip install --upgrade pip'
-                sh 'python -m pip install -r requirements.txt'
+                sh '''
+                    "$VENV/bin/python" -m pip install -r requirements.txt
+                '''
             }
         }
 
         stage('Static Health') {
             steps {
-                sh 'python scripts/check_secrets.py'
-                sh 'python scripts/check_python_syntax.py'
-                sh 'python scripts/check_app_health.py'
+                sh '''
+                    "$VENV/bin/python" scripts/check_secrets.py
+                    "$VENV/bin/python" scripts/check_python_syntax.py
+                    "$VENV/bin/python" scripts/check_app_health.py
+                '''
             }
         }
 
         stage('Tests and Types') {
             steps {
+                script {
+                    int pytestStatus = sh(
+                        script: '"$VENV/bin/python" -m pytest',
+                        returnStatus: true
+                    )
+
+                    if (pytestStatus != 0 && pytestStatus != 5) {
+                        error("Pytest failed with exit code ${pytestStatus}")
+                    }
+
+                    if (pytestStatus == 5) {
+                        echo 'Pytest found no tests. Continuing.'
+                    }
+                }
+
                 sh '''
-                    python -m pytest
-                    status=$?
-                    if [ "$status" -ne 0 ] && [ "$status" -ne 5 ]; then
-                        exit "$status"
-                    fi
+                    "$VENV/bin/python" -m mypy app
                 '''
-                sh 'python -m mypy app'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'All pipeline checks completed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Review the failed stage above.'
         }
     }
 }
