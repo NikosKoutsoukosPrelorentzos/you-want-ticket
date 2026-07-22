@@ -1,15 +1,22 @@
 services:
   db:
-    image: postgres:15
+    image: ${DB_IMAGE:-you-want-ticket-postgres:local}
+
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.postgres
+
     environment:
       POSTGRES_DB: you_want_ticket
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"
+
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d you_want_ticket"]
       interval: 5s
@@ -17,16 +24,20 @@ services:
       retries: 10
 
   app:
-    image: you-want-ticket:ci
+    image: ${APP_IMAGE:-you-want-ticket:local}
+
     build:
       context: ..
       dockerfile: docker/Dockerfile
+
     environment:
       SQLALCHEMY_DATABASE_URI: postgresql://user:password@db:5432/you_want_ticket
-      SECRET_KEY: CI_ONLY_SECRET_KEY
-      PYTHONUNBUFFERED: '1'
+      SECRET_KEY: ${SECRET_KEY:-LOCAL_ONLY_SECRET_KEY}
+      PYTHONUNBUFFERED: "1"
+
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
+
     depends_on:
       db:
         condition: service_healthy
