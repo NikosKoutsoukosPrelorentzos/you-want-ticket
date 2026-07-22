@@ -15,17 +15,25 @@ pipeline {
         APP_IMAGE = "you-want-ticket:ci"
         DB_IMAGE = "you-want-ticket-postgres:ci"
 
-        // Different host ports let local Docker and Jenkins run together.
+        // Different ports from the normal local environment.
         APP_PORT = "18000"
         DB_PORT = "15434"
 
-        // Jenkins is a container, so 127.0.0.1 would point to Jenkins itself.
+        /*
+         * Jenkins runs inside a container.
+         * Therefore, 127.0.0.1 would point to Jenkins itself.
+         */
         APP_URL = "http://host.docker.internal:18000"
 
-        // Scanner containers join the application's Compose network.
+        /*
+         * Security scanner containers join the application Compose network,
+         * so they access FastAPI through the Compose service name.
+         */
         INTERNAL_APP_URL = "http://app:8000"
 
-        // Used by --volumes-from so scanners can access the Jenkins workspace.
+        // FastAPI OpenAPI path configured by the application.
+        OPENAPI_PATH = "/api/v1/openapi.json"
+
         JENKINS_CONTAINER = "you-want-ticket-jenkins"
     }
 
@@ -51,8 +59,10 @@ pipeline {
                     docker compose version
 
                     python3 -m venv "$VENV"
+
                     "$VENV/bin/python" -m pip install --upgrade pip
                     "$VENV/bin/python" -m pip install -r requirements.txt
+
                     "$VENV/bin/python" -m pip install \
                         bandit \
                         pip-audit \
@@ -63,10 +73,10 @@ pipeline {
                         pytest
 
                     mkdir -p "$REPORT_DIR/sqlmap"
+
                     : > "$REPORT_DIR/pipeline_issues.txt"
                     : > "$REPORT_DIR/check_summary.txt"
 
-                    # Scanner images may run as non-root users.
                     chmod -R 0777 "$REPORT_DIR"
                 '''
             }
@@ -75,44 +85,143 @@ pipeline {
         stage('Static Checks') {
             steps {
                 script {
-                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
-                    String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
+                    String summaryFile =
+                        "${env.REPORT_DIR}/check_summary.txt"
 
-                    def recordResult = { String label, int status, String passNote = 'PASS' ->
-                        String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
+                    String issueFile =
+                        "${env.REPORT_DIR}/pipeline_issues.txt"
+
+                    def recordResult = {
+                        String label,
+                        int status,
+                        String passNote = 'PASS'
+                    ->
+                        String summary = fileExists(summaryFile)
+                            ? readFile(summaryFile)
+                            : ''
+
                         String resultLine = status == 0
                             ? "${label}: ${passNote}"
                             : "${label}: FAIL (exit ${status})"
 
-                        writeFile(file: summaryFile, text: summary + resultLine + '\n')
+                        writeFile(
+                            file: summaryFile,
+                            text: summary + resultLine + '\n'
+                        )
 
                         if (status != 0) {
                             echo "[WARNING] ${label} failed with exit code ${status}"
-                            String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
+
+                            String currentIssues = fileExists(issueFile)
+                                ? readFile(issueFile)
+                                : ''
+
                             writeFile(
                                 file: issueFile,
-                                text: currentIssues + "${label}: exit ${status}\n"
+                                text: currentIssues +
+                                    "${label}: exit ${status}\n"
                             )
                         }
                     }
 
-                    def runCheck = { String label, String command ->
-                        int status = sh(script: command, returnStatus: true)
+                    def runCheck = {
+                        String label,
+                        String command
+                    ->
+                        int status = sh(
+                            script: command,
+                            returnStatus: true
+                        )
+
                         recordResult(label, status)
+                        return status
                     }
 
-                    runCheck('secret detection', '''"$VENV/bin/python" scripts/check_secrets.py''')
-                    runCheck('python syntax check', '''"$VENV/bin/python" scripts/check_python_syntax.py''')
-                    runCheck('application health check', '''"$VENV/bin/python" scripts/check_app_health.py''')
-                    runCheck('black', '''"$VENV/bin/python" -m black --check app main.py scripts''')
-                    runCheck('isort', '''"$VENV/bin/python" -m isort --check-only app main.py scripts''')
-                    runCheck('flake8', '''"$VENV/bin/python" -m flake8 app main.py scripts''')
-                    runCheck('mypy', '''"$VENV/bin/python" -m mypy app''')
-                    runCheck('bandit', '''"$VENV/bin/python" -m bandit -r app main.py scripts -f json -o "$REPORT_DIR/bandit.json"''')
-                    runCheck('pip-audit', '''"$VENV/bin/python" -m pip_audit -r requirements.txt -f json -o "$REPORT_DIR/pip-audit.json"''')
+                    runCheck(
+                        'secret detection',
+                        '''
+                        "$VENV/bin/python" scripts/check_secrets.py
+                        '''
+                    )
 
-                    // Do not use -v "$PWD:/workspace" from Dockerized Jenkins.
-                    runCheck('semgrep', '''
+                    runCheck(
+                        'python syntax check',
+                        '''
+                        "$VENV/bin/python" scripts/check_python_syntax.py
+                        '''
+                    )
+
+                    runCheck(
+                        'application health check',
+                        '''
+                        "$VENV/bin/python" scripts/check_app_health.py
+                        '''
+                    )
+
+                    runCheck(
+                        'black',
+                        '''
+                        "$VENV/bin/python" \
+                          -m black \
+                          --check \
+                          app main.py scripts
+                        '''
+                    )
+
+                    runCheck(
+                        'isort',
+                        '''
+                        "$VENV/bin/python" \
+                          -m isort \
+                          --check-only \
+                          app main.py scripts
+                        '''
+                    )
+
+                    runCheck(
+                        'flake8',
+                        '''
+                        "$VENV/bin/python" \
+                          -m flake8 \
+                          app main.py scripts
+                        '''
+                    )
+
+                    runCheck(
+                        'mypy',
+                        '''
+                        "$VENV/bin/python" \
+                          -m mypy \
+                          --explicit-package-bases \
+                          app
+                        '''
+                    )
+
+                    runCheck(
+                        'bandit',
+                        '''
+                        "$VENV/bin/python" \
+                          -m bandit \
+                          -r app main.py scripts \
+                          -f json \
+                          -o "$REPORT_DIR/bandit.json"
+                        '''
+                    )
+
+                    runCheck(
+                        'pip-audit',
+                        '''
+                        "$VENV/bin/python" \
+                          -m pip_audit \
+                          -r requirements.txt \
+                          -f json \
+                          -o "$REPORT_DIR/pip-audit.json"
+                        '''
+                    )
+
+                    runCheck(
+                        'semgrep',
+                        '''
                         docker run --rm \
                           --volumes-from "$JENKINS_CONTAINER" \
                           -w "$WORKSPACE" \
@@ -123,26 +232,40 @@ pipeline {
                           --json \
                           --output "$REPORT_DIR/semgrep.json" \
                           .
-                    ''')
+                        '''
+                    )
 
-                    runCheck('hadolint', '''
+                    runCheck(
+                        'hadolint',
+                        '''
                         docker run --rm \
                           --volumes-from "$JENKINS_CONTAINER" \
                           -w "$WORKSPACE" \
                           hadolint/hadolint:latest-debian \
                           hadolint docker/Dockerfile
-                    ''')
+                        '''
+                    )
 
                     int pytestStatus = sh(
-                        script: '"$VENV/bin/python" -m pytest',
+                        script: '''
+                            "$VENV/bin/python" -m pytest
+                        ''',
                         returnStatus: true
                     )
 
                     if (pytestStatus == 5) {
                         echo 'Pytest found no tests. Continuing.'
-                        recordResult('pytest', 0, 'PASS (no tests found)')
+
+                        recordResult(
+                            'pytest',
+                            0,
+                            'PASS (no tests found)'
+                        )
                     } else {
-                        recordResult('pytest', pytestStatus)
+                        recordResult(
+                            'pytest',
+                            pytestStatus
+                        )
                     }
                 }
             }
@@ -161,25 +284,40 @@ pipeline {
                         returnStatus: true
                     )
 
-                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
-                    String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
-                    String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
+                    String summaryFile =
+                        "${env.REPORT_DIR}/check_summary.txt"
+
+                    String issueFile =
+                        "${env.REPORT_DIR}/pipeline_issues.txt"
+
+                    String summary = fileExists(summaryFile)
+                        ? readFile(summaryFile)
+                        : ''
 
                     if (buildStatus != 0) {
                         echo "[WARNING] Docker Compose build failed with exit code ${buildStatus}"
-                        String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
+
+                        String currentIssues = fileExists(issueFile)
+                            ? readFile(issueFile)
+                            : ''
+
                         writeFile(
                             file: issueFile,
-                            text: currentIssues + "docker compose build: exit ${buildStatus}\n"
+                            text: currentIssues +
+                                "docker compose build: exit ${buildStatus}\n"
                         )
+
                         writeFile(
                             file: summaryFile,
-                            text: summary + "docker compose build: FAIL (exit ${buildStatus})\n"
+                            text: summary +
+                                "docker compose build: FAIL " +
+                                "(exit ${buildStatus})\n"
                         )
                     } else {
                         writeFile(
                             file: summaryFile,
-                            text: summary + "docker compose build: PASS\n"
+                            text: summary +
+                                "docker compose build: PASS\n"
                         )
                     }
                 }
@@ -189,33 +327,61 @@ pipeline {
         stage('Dynamic Checks') {
             steps {
                 script {
-                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
-                    String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
+                    String summaryFile =
+                        "${env.REPORT_DIR}/check_summary.txt"
 
-                    def recordResult = { String label, int status, String passNote = 'PASS' ->
-                        String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
+                    String issueFile =
+                        "${env.REPORT_DIR}/pipeline_issues.txt"
+
+                    def recordResult = {
+                        String label,
+                        int status,
+                        String passNote = 'PASS'
+                    ->
+                        String summary = fileExists(summaryFile)
+                            ? readFile(summaryFile)
+                            : ''
+
                         String resultLine = status == 0
                             ? "${label}: ${passNote}"
                             : "${label}: FAIL (exit ${status})"
 
-                        writeFile(file: summaryFile, text: summary + resultLine + '\n')
+                        writeFile(
+                            file: summaryFile,
+                            text: summary + resultLine + '\n'
+                        )
 
                         if (status != 0) {
                             echo "[WARNING] ${label} failed with exit code ${status}"
-                            String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
+
+                            String currentIssues = fileExists(issueFile)
+                                ? readFile(issueFile)
+                                : ''
+
                             writeFile(
                                 file: issueFile,
-                                text: currentIssues + "${label}: exit ${status}\n"
+                                text: currentIssues +
+                                    "${label}: exit ${status}\n"
                             )
                         }
                     }
 
-                    def runCheck = { String label, String command ->
-                        int status = sh(script: command, returnStatus: true)
+                    def runCheck = {
+                        String label,
+                        String command
+                    ->
+                        int status = sh(
+                            script: command,
+                            returnStatus: true
+                        )
+
                         recordResult(label, status)
                         return status
                     }
 
+                    /*
+                     * Start the already-built application and database images.
+                     */
                     int composeStatus = sh(
                         script: '''
                             docker compose \
@@ -226,23 +392,29 @@ pipeline {
                         returnStatus: true
                     )
 
-                    recordResult('docker compose up', composeStatus)
+                    recordResult(
+                        'docker compose up',
+                        composeStatus
+                    )
 
                     if (composeStatus != 0) {
                         sh '''
                             echo "===== Compose status ====="
+
                             docker compose \
                               -p "$COMPOSE_PROJECT_NAME" \
                               -f docker/docker-compose.yml \
                               ps -a || true
 
                             echo "===== PostgreSQL logs ====="
+
                             docker compose \
                               -p "$COMPOSE_PROJECT_NAME" \
                               -f docker/docker-compose.yml \
                               logs --no-color db || true
 
                             echo "===== Application logs ====="
+
                             docker compose \
                               -p "$COMPOSE_PROJECT_NAME" \
                               -f docker/docker-compose.yml \
@@ -250,6 +422,13 @@ pipeline {
                         '''
                     }
 
+                    /*
+                     * Correct readiness check:
+                     *
+                     * http://host.docker.internal:18000
+                     * +
+                     * /api/v1/openapi.json
+                     */
                     int readinessStatus = 1
 
                     if (composeStatus == 0) {
@@ -258,12 +437,38 @@ pipeline {
                                 attempt=1
 
                                 while [ "$attempt" -le 30 ]; do
+                                    echo "Readiness attempt $attempt..."
+
                                     if "$VENV/bin/python" - <<'PY'
 import os
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
-url = os.environ["APP_URL"] + "/openapi.json"
-urlopen(url, timeout=2).read()
+app_url = os.environ["APP_URL"].rstrip("/")
+openapi_path = os.environ["OPENAPI_PATH"]
+
+url = f"{app_url}{openapi_path}"
+
+try:
+    response = urlopen(url, timeout=3)
+
+    if response.status == 200:
+        response.read()
+        print(f"Application is ready: {url}")
+        raise SystemExit(0)
+
+    print(f"Unexpected HTTP status: {response.status}")
+
+except HTTPError as error:
+    print(f"HTTP error {error.code} from {url}")
+
+except URLError as error:
+    print(f"Connection error for {url}: {error}")
+
+except Exception as error:
+    print(f"Readiness error for {url}: {error}")
+
+raise SystemExit(1)
 PY
                                     then
                                         exit 0
@@ -273,6 +478,7 @@ PY
                                     sleep 2
                                 done
 
+                                echo "Application did not become ready."
                                 exit 1
                             ''',
                             returnStatus: true
@@ -281,9 +487,17 @@ PY
                         echo 'Skipping readiness polling because Compose startup failed.'
                     }
 
-                    recordResult('openapi readiness', readinessStatus)
+                    recordResult(
+                        'openapi readiness',
+                        readinessStatus
+                    )
 
-                    runCheck('trivy', '''
+                    /*
+                     * Trivy scans the built application image.
+                     */
+                    runCheck(
+                        'trivy',
+                        '''
                         docker run --rm \
                           --volumes-from "$JENKINS_CONTAINER" \
                           -w "$WORKSPACE" \
@@ -294,23 +508,32 @@ PY
                           --format json \
                           --output "$REPORT_DIR/trivy.json" \
                           "$APP_IMAGE"
-                    ''')
+                        '''
+                    )
 
+                    /*
+                     * Run dynamic scanners only when the application is ready.
+                     */
                     if (readinessStatus == 0) {
-                        runCheck('zap', '''
+                        runCheck(
+                            'zap',
+                            '''
                             docker run --rm \
                               --network "${COMPOSE_PROJECT_NAME}_default" \
                               --volumes-from "$JENKINS_CONTAINER" \
                               -w "$WORKSPACE" \
                               owasp/zap2docker-stable \
                               zap-api-scan.py \
-                              -t "$INTERNAL_APP_URL/openapi.json" \
+                              -t "$INTERNAL_APP_URL$OPENAPI_PATH" \
                               -f openapi \
                               -r "$REPORT_DIR/zap.html" \
                               -J "$REPORT_DIR/zap.json"
-                        ''')
+                            '''
+                        )
 
-                        runCheck('nmap', '''
+                        runCheck(
+                            'nmap',
+                            '''
                             docker run --rm \
                               --network "${COMPOSE_PROJECT_NAME}_default" \
                               --volumes-from "$JENKINS_CONTAINER" \
@@ -320,9 +543,12 @@ PY
                               -p 8000 \
                               -oN "$REPORT_DIR/nmap.txt" \
                               app
-                        ''')
+                            '''
+                        )
 
-                        runCheck('sqlmap', '''
+                        runCheck(
+                            'sqlmap',
+                            '''
                             while IFS='|' read -r method url data; do
                                 [ -z "$method" ] && continue
 
@@ -358,12 +584,10 @@ PY
                                       --output-dir="$REPORT_DIR/sqlmap"
                                 fi
                             done < endpoints.txt
-                        ''')
+                            '''
+                        )
                     } else {
                         echo 'Skipping ZAP, Nmap and SQLMap because the application is not ready.'
-                        recordResult('zap', 0, 'SKIPPED (application unavailable)')
-                        recordResult('nmap', 0, 'SKIPPED (application unavailable)')
-                        recordResult('sqlmap', 0, 'SKIPPED (application unavailable)')
                     }
                 }
             }
@@ -372,13 +596,29 @@ PY
         stage('Generate Report') {
             steps {
                 script {
-                    String summary = fileExists("${env.REPORT_DIR}/check_summary.txt")
-                        ? readFile("${env.REPORT_DIR}/check_summary.txt").trim()
-                        : ''
+                    String summary = ''
 
-                    String issues = fileExists("${env.REPORT_DIR}/pipeline_issues.txt")
-                        ? readFile("${env.REPORT_DIR}/pipeline_issues.txt").trim()
-                        : ''
+                    if (
+                        fileExists(
+                            "${env.REPORT_DIR}/check_summary.txt"
+                        )
+                    ) {
+                        summary = readFile(
+                            "${env.REPORT_DIR}/check_summary.txt"
+                        ).trim()
+                    }
+
+                    String issues = ''
+
+                    if (
+                        fileExists(
+                            "${env.REPORT_DIR}/pipeline_issues.txt"
+                        )
+                    ) {
+                        issues = readFile(
+                            "${env.REPORT_DIR}/pipeline_issues.txt"
+                        ).trim()
+                    }
 
                     if (issues) {
                         currentBuild.result = 'UNSTABLE'
@@ -426,7 +666,7 @@ ${issues ? issues : 'None'}
         }
 
         unstable {
-            echo 'Pipeline completed with warnings. Review reports/final-report.txt and reports/pipeline_issues.txt.'
+            echo 'Pipeline completed with warnings. Review the generated reports.'
         }
 
         success {
