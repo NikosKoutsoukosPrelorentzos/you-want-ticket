@@ -327,7 +327,7 @@ PY
                                 [ -z "$method" ] && continue
 
                                 case "$method" in
-                                    \#*) continue ;;
+                                    "#"*) continue ;;
                                 esac
 
                                 if [ "$method" = "POST" ]; then
