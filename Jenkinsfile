@@ -12,26 +12,16 @@ pipeline {
         REPORT_DIR = "${WORKSPACE}/reports"
 
         COMPOSE_PROJECT_NAME = "you-want-ticket-ci"
+
         APP_IMAGE = "you-want-ticket:ci"
         DB_IMAGE = "you-want-ticket-postgres:ci"
+        SQLMAP_IMAGE = "you-want-ticket-sqlmap:ci"
 
-        // Different ports from the normal local environment.
         APP_PORT = "18000"
         DB_PORT = "15434"
 
-        /*
-         * Jenkins runs inside a container.
-         * Therefore, 127.0.0.1 would point to Jenkins itself.
-         */
         APP_URL = "http://host.docker.internal:18000"
-
-        /*
-         * Security scanner containers join the application Compose network,
-         * so they access FastAPI through the Compose service name.
-         */
         INTERNAL_APP_URL = "http://app:8000"
-
-        // FastAPI OpenAPI path configured by the application.
         OPENAPI_PATH = "/api/v1/openapi.json"
 
         JENKINS_CONTAINER = "you-want-ticket-jenkins"
@@ -280,6 +270,11 @@ pipeline {
                               -p "$COMPOSE_PROJECT_NAME" \
                               -f docker/docker-compose.yml \
                               build db app
+
+                            docker build \
+                              -f docker/Dockerfile.sqlmap \
+                              -t "$SQLMAP_IMAGE" \
+                              .
                         ''',
                         returnStatus: true
                     )
@@ -518,16 +513,39 @@ PY
                         runCheck(
                             'zap',
                             '''
-                            docker run --rm \
+                            ZAP_CONTAINER="${COMPOSE_PROJECT_NAME}-zap"
+
+                            docker rm -f "$ZAP_CONTAINER" >/dev/null 2>&1 || true
+
+                            set +e
+
+                            docker run \
+                              --name "$ZAP_CONTAINER" \
                               --network "${COMPOSE_PROJECT_NAME}_default" \
-                              --volumes-from "$JENKINS_CONTAINER" \
-                              -w "$WORKSPACE" \
+                              --mount type=volume,destination=/zap/wrk \
                               ghcr.io/zaproxy/zaproxy:stable \
                               zap-api-scan.py \
                               -t "$INTERNAL_APP_URL$OPENAPI_PATH" \
                               -f openapi \
-                              -r "$REPORT_DIR/zap.html" \
-                              -J "$REPORT_DIR/zap.json"
+                              -r zap.html \
+                              -J zap.json \
+                              -I
+
+                            zapStatus=$?
+
+                            set -e
+
+                            docker cp \
+                              "$ZAP_CONTAINER:/zap/wrk/zap.html" \
+                              "$REPORT_DIR/zap.html" || true
+
+                            docker cp \
+                              "$ZAP_CONTAINER:/zap/wrk/zap.json" \
+                              "$REPORT_DIR/zap.json" || true
+
+                            docker rm -f "$ZAP_CONTAINER" >/dev/null 2>&1 || true
+
+                            exit "$zapStatus"
                             '''
                         )
 
@@ -549,6 +567,8 @@ PY
                         runCheck(
                             'sqlmap',
                             '''
+                            overallStatus=0
+
                             while IFS='|' read -r method url data; do
                                 [ -z "$method" ] && continue
 
@@ -556,34 +576,38 @@ PY
                                     "#"*) continue ;;
                                 esac
 
+                                echo "Testing $method $url"
+
                                 if [ "$method" = "POST" ]; then
                                     docker run --rm \
                                       --network "${COMPOSE_PROJECT_NAME}_default" \
                                       --volumes-from "$JENKINS_CONTAINER" \
                                       -w "$WORKSPACE" \
-                                      sqlmapproject/sqlmap \
-                                      sqlmap \
+                                      "$SQLMAP_IMAGE" \
                                       -u "$url" \
                                       --data="$data" \
                                       --method=POST \
                                       --batch \
                                       --risk=1 \
                                       --level=1 \
-                                      --output-dir="$REPORT_DIR/sqlmap"
+                                      --output-dir="$REPORT_DIR/sqlmap" \
+                                      || overallStatus=$?
                                 else
                                     docker run --rm \
                                       --network "${COMPOSE_PROJECT_NAME}_default" \
                                       --volumes-from "$JENKINS_CONTAINER" \
                                       -w "$WORKSPACE" \
-                                      sqlmapproject/sqlmap \
-                                      sqlmap \
+                                      "$SQLMAP_IMAGE" \
                                       -u "$url" \
                                       --batch \
                                       --risk=1 \
                                       --level=1 \
-                                      --output-dir="$REPORT_DIR/sqlmap"
+                                      --output-dir="$REPORT_DIR/sqlmap" \
+                                      || overallStatus=$?
                                 fi
                             done < endpoints.txt
+
+                            exit "$overallStatus"
                             '''
                         )
                     } else {
