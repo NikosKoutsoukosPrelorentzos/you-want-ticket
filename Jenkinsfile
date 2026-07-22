@@ -17,6 +17,10 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                echo 'Cleaning Jenkins workspace...'
+                deleteDir()
+
+                echo 'Checking out repository...'
                 checkout scm
             }
         }
