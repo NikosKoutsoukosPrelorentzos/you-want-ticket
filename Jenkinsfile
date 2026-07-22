@@ -32,6 +32,7 @@ pipeline {
                     "$VENV/bin/python" -m pip install bandit pip-audit
                     mkdir -p "$REPORT_DIR"
                     : > "$REPORT_DIR/pipeline_issues.txt"
+                    : > "$REPORT_DIR/check_summary.txt"
                 '''
             }
         }
@@ -39,9 +40,14 @@ pipeline {
         stage('Static Checks') {
             steps {
                 script {
+                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
                     String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
 
-                    def recordIssue = { String label, int status ->
+                    def recordResult = { String label, int status, String passNote = 'PASS' ->
+                        String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
+                        String resultLine = status == 0 ? "${label}: ${passNote}" : "${label}: FAIL (exit ${status})"
+                        writeFile(file: summaryFile, text: summary + resultLine + '\n')
+
                         if (status != 0) {
                             echo "[WARNING] ${label} failed with exit code ${status}"
                             String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
@@ -51,7 +57,7 @@ pipeline {
 
                     def runCheck = { String label, String command ->
                         int status = sh(script: command, returnStatus: true)
-                        recordIssue(label, status)
+                        recordResult(label, status)
                     }
 
                     runCheck('secret detection', '''"$VENV/bin/python" scripts/check_secrets.py''')
@@ -69,8 +75,9 @@ pipeline {
                     int pytestStatus = sh(script: '"$VENV/bin/python" -m pytest', returnStatus: true)
                     if (pytestStatus == 5) {
                         echo 'Pytest found no tests. Continuing.'
+                        recordResult('pytest', 0, 'PASS (no tests found)')
                     } else {
-                        recordIssue('pytest', pytestStatus)
+                        recordResult('pytest', pytestStatus)
                     }
                 }
             }
@@ -80,11 +87,16 @@ pipeline {
             steps {
                 script {
                     int buildStatus = sh(script: 'docker build -f docker/Dockerfile -t "$APP_IMAGE" .', returnStatus: true)
+                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
+                    String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
+                    String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
                     if (buildStatus != 0) {
                         echo "[WARNING] docker build failed with exit code ${buildStatus}"
-                        String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
                         String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
                         writeFile(file: issueFile, text: currentIssues + "docker build: exit ${buildStatus}\n")
+                        writeFile(file: summaryFile, text: summary + "docker build: FAIL (exit ${buildStatus})\n")
+                    } else {
+                        writeFile(file: summaryFile, text: summary + "docker build: PASS\n")
                     }
                 }
             }
@@ -93,9 +105,14 @@ pipeline {
         stage('Dynamic Checks') {
             steps {
                 script {
+                    String summaryFile = "${env.REPORT_DIR}/check_summary.txt"
                     String issueFile = "${env.REPORT_DIR}/pipeline_issues.txt"
 
-                    def recordIssue = { String label, int status ->
+                    def recordResult = { String label, int status, String passNote = 'PASS' ->
+                        String summary = fileExists(summaryFile) ? readFile(summaryFile) : ''
+                        String resultLine = status == 0 ? "${label}: ${passNote}" : "${label}: FAIL (exit ${status})"
+                        writeFile(file: summaryFile, text: summary + resultLine + '\n')
+
                         if (status != 0) {
                             echo "[WARNING] ${label} failed with exit code ${status}"
                             String currentIssues = fileExists(issueFile) ? readFile(issueFile) : ''
@@ -105,7 +122,7 @@ pipeline {
 
                     def runCheck = { String label, String command ->
                         int status = sh(script: command, returnStatus: true)
-                        recordIssue(label, status)
+                        recordResult(label, status)
                     }
 
                     runCheck('docker compose up', '''docker compose -p "$COMPOSE_PROJECT_NAME" -f docker/docker-compose.yml up -d db app''')
@@ -131,7 +148,7 @@ exit 1
 while IFS='|' read -r method url data; do
     [ -z "$method" ] && continue
     case "$method" in
-        \#*) continue ;;
+        #*) continue ;;
     esac
 
     if [ "$method" = "POST" ]; then
@@ -148,6 +165,11 @@ done < endpoints.txt
         stage('Generate Report') {
             steps {
                 script {
+                    String summary = ''
+                    if (fileExists("${env.REPORT_DIR}/check_summary.txt")) {
+                        summary = readFile("${env.REPORT_DIR}/check_summary.txt").trim()
+                    }
+
                     String issues = ''
                     if (fileExists("${env.REPORT_DIR}/pipeline_issues.txt")) {
                         issues = readFile("${env.REPORT_DIR}/pipeline_issues.txt").trim()
@@ -160,6 +182,9 @@ done < endpoints.txt
                     writeFile(
                         file: "${env.REPORT_DIR}/final-report.txt",
                         text: """CI/CD and security pipeline completed.
+
+Check summary:
+${summary ? summary : 'No checks recorded.'}
 
 Collected outputs:
 - reports/bandit.json
