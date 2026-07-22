@@ -522,7 +522,7 @@ PY
                               --network "${COMPOSE_PROJECT_NAME}_default" \
                               --volumes-from "$JENKINS_CONTAINER" \
                               -w "$WORKSPACE" \
-                              owasp/zap2docker-stable \
+                              ghcr.io/zaproxy/zaproxy:stable \
                               zap-api-scan.py \
                               -t "$INTERNAL_APP_URL$OPENAPI_PATH" \
                               -f openapi \

@@ -1,2 +1,4 @@
 # method|url|data
-POST|http://app:8000/api/v1/login/access-token|username=test@example.com&password=test123
+GET|http://app:8000/api/v1/events|
+GET|http://app:8000/api/v1/places|
+POST|http://app:8000/api/v1/login/access-token|username=test@example.com&password=test
