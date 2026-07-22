@@ -1,0 +1,2 @@
+# method|url|data
+POST|http://app:8000/api/v1/login/access-token|username=test@example.com&password=test123

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -12,6 +10,26 @@ services:
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d you_want_ticket"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: you-want-ticket:ci
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      SQLALCHEMY_DATABASE_URI: postgresql://user:password@db:5432/you_want_ticket
+      SECRET_KEY: CI_ONLY_SECRET_KEY
+      PYTHONUNBUFFERED: '1'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

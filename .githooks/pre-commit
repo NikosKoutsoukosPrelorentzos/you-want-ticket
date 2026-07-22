@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
+if [ "${SKIP_GIT_HOOKS:-0}" = "1" ] || [ "${SKIP_PRE_COMMIT:-0}" = "1" ]; then
+    exit 0
+fi
+
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
